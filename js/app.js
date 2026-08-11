@@ -101,6 +101,7 @@
   let syncingOnce = false;
   let remoteRes = null;
   let resUpdatedAt = null;
+  let loadingRemote = false;
   let agentInput = "";
   let agentShowJd = false;
   let agentResult = null;
@@ -1762,6 +1763,8 @@
 
   async function loadRemoteResources() {
     if (!window.OFFERFLOW_BACKEND) return;
+    if (loadingRemote) return;
+    loadingRemote = true;
     try {
       const r = await fetch("/api/resources", { cache: "no-store" });
       if (!r.ok) return;
@@ -1772,6 +1775,9 @@
         render();
       }
     } catch (e) {}
+    finally {
+      loadingRemote = false;
+    }
   }
 
   function resCityOptions(key) {

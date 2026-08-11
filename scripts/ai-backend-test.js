@@ -68,6 +68,12 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     await page.waitForFunction(() => document.querySelector('#resSyncBadge').textContent.includes('云端数据'), null, { timeout: 10000 });
     const t = await page.textContent('#view');
     ok('resources note reflects cloud data', t.includes('云端聚合数据') && !t.includes('内置演示数据'));
+    await page.click('[data-action="tab-res"][data-value="intern"]');
+    await page.waitForFunction(() => document.querySelector('#resTable') && document.querySelector('#resTable').textContent.includes('瀚亚投资'), null, { timeout: 10000 });
+    await page.click('[data-action="apply-resource"]');
+    await page.waitForSelector('#fCompany');
+    ok('resources tabs and apply clickable', true);
+    await page.click('[data-action="close-modal"]');
   });
 
   await step('backend ai rewrite without user key', async () => {
