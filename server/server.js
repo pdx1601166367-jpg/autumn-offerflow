@@ -66,10 +66,16 @@ ensureData();
 let users = readJson(USERS_FILE, { users: [] });
 let sessions = readJson(SESSIONS_FILE, { sessions: {} });
 let resources = readJson(RESOURCES_FILE, { updatedAt: null, items: [] });
+let jobRuns = [];
 
 function saveUsers() { writeJson(USERS_FILE, users); }
 function saveSessions() { writeJson(SESSIONS_FILE, sessions); }
 function saveResources() { writeJson(RESOURCES_FILE, resources); }
+
+function recordJob(type, ok, added) {
+  jobRuns.unshift({ type, at: new Date().toISOString(), ok, added });
+  jobRuns = jobRuns.slice(0, 20);
+}
 
 const refreshLimit = {};
 
@@ -132,12 +138,20 @@ const FEED_URL = process.env.RESOURCES_FEED_URL || '';
 
 function scheduleRefresh() {
   if (!FEED_URL) return;
-  const last = resources.updatedAt ? new Date(resources.updatedAt).getTime() : 0;
-  if (Date.now() - last > 12 * 3600e3) refreshResources(FEED_URL).catch(() => {});
-  setInterval(() => {
-    const lastTs = resources.updatedAt ? new Date(resources.updatedAt).getTime() : 0;
-    if (Date.now() - lastTs > 12 * 3600e3) refreshResources(FEED_URL).catch(() => {});
-  }, 6 * 3600e3);
+  const check = () => {
+    const now = new Date();
+    const last = resources.updatedAt ? new Date(resources.updatedAt) : null;
+    const stale = !last || (Date.now() - last.getTime() > 12 * 3600e3);
+    const dailySlot = now.getHours() === 9;
+    const ranToday = last && last.toDateString() === now.toDateString();
+    if (stale && dailySlot && !ranToday) {
+      refreshResources(FEED_URL).then(r => recordJob('daily-feed', true, r.added)).catch(() => recordJob('daily-feed', false, 0));
+    } else if (stale) {
+      refreshResources(FEED_URL).then(r => recordJob('feed', true, r.added)).catch(() => recordJob('feed', false, 0));
+    }
+  };
+  check();
+  setInterval(check, 3600e3);
 }
 
 function rateLimited(ip) {
@@ -222,6 +236,10 @@ const server = http.createServer(async (req, res) => {
   if (pathname.startsWith('/api/')) {
     try {
       if (pathname === '/api/system/status' && req.method === 'GET') {
+        const now = new Date();
+        const next = new Date(now);
+        next.setHours(9, 0, 0, 0);
+        if (now >= next) next.setDate(next.getDate() + 1);
         return sendJson(res, 200, {
           version: '2.0',
           aiConfigured: !!AI_API_KEY,
@@ -229,7 +247,9 @@ const server = http.createServer(async (req, res) => {
           feedConfigured: !!FEED_URL,
           resourcesUpdatedAt: resources.updatedAt,
           resourcesCount: resources.items.length,
-          userCount: users.users.length
+          userCount: users.users.length,
+          jobRuns: jobRuns.slice(0, 5),
+          nextDailyRun: next.toISOString()
         });
       }
       if (pathname === '/api/ai/chat' && req.method === 'POST') {
@@ -269,8 +289,10 @@ const server = http.createServer(async (req, res) => {
         if (!feedUrl) return sendJson(res, 400, { error: '未配置校招数据源（RESOURCES_FEED_URL）' });
         try {
           const r = await refreshResources(feedUrl);
+          recordJob('manual-refresh', true, r.added);
           return sendJson(res, 200, Object.assign({ ok: true, updatedAt: resources.updatedAt }, r));
         } catch (e) {
+          recordJob('manual-refresh', false, 0);
           return sendJson(res, 502, { error: '数据源抓取失败：' + e.message });
         }
       }
@@ -290,6 +312,7 @@ const server = http.createServer(async (req, res) => {
         });
         if (incoming.length) resources.updatedAt = new Date().toISOString();
         saveResources();
+        recordJob('import', true, added);
         return sendJson(res, 200, { ok: true, added, total: resources.items.length });
       }
       if (pathname === '/api/register' && req.method === 'POST') {

@@ -32,15 +32,26 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     await page.fill('#authPass', 'test123456');
     await page.click('[data-action="auth-register"]');
     await page.waitForFunction(() => document.getElementById('modalRoot').hidden === true, null, { timeout: 15000 });
+    const token = await page.evaluate(() => localStorage.getItem('offerflow:token'));
+    const importRes = await page.evaluate(async (t) => {
+      const items = [{ type: 'campus', company: '云端检索公司', batch: '秋招', date: '2026-08-11', roles: 'AI 产品经理', cities: '北京', link: '', note: 'agent retrieval test' }];
+      return fetch('/api/resources/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
+        body: JSON.stringify({ items }),
+        cache: 'no-store'
+      }).then(r => r.json());
+    }, token);
+    ok('import job for agent retrieval', importRes.ok === true);
     await page.goto(BASE + '/#/agent', { waitUntil: 'load' });
-    await page.fill('#agentGoal', '帮我准备腾讯 AI 产品经理面试，还有 7 天');
+    await page.fill('#agentGoal', '帮我分析云端检索公司 AI 产品经理岗位适不适合');
     await page.click('[data-action="run-agent"]');
     await page.waitForFunction(() => {
       const el = document.querySelector('#agentResultWrap');
-      return el && el.textContent.includes('AI 驱动') && el.textContent.includes('analyze_jd');
+      return el && el.textContent.includes('AI 驱动') && el.textContent.includes('云端检索公司');
     }, null, { timeout: 240000 });
     const t = await page.textContent('#agentResultWrap');
-    ok('backend agent ai driven', t.includes('LLM 决策') && t.includes('analyze_jd'));
+    ok('backend agent retrieves imported job', t.includes('LLM 决策') && t.includes('云端检索公司'));
   });
 
   await step('backend solver ai', async () => {

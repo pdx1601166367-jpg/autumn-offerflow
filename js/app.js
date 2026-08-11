@@ -1738,6 +1738,7 @@
           <div class="grow"></div>${badge(title, "b-teal")}
           <span class="badge b-gray" id="resSyncBadge">${resUpdatedAt ? "云端已同步 · " + String(resUpdatedAt).slice(5, 16) : "内置演示数据"}</span>
           <button class="btn btn-sm" data-action="refresh-resources">${Icon("refresh")}立即抓取</button>
+          ${window.OFFERFLOW_BACKEND ? '<button class="btn btn-sm" data-action="import-resources-json">' + Icon("upload") + "导入 JSON</button>" : ""}
         </div>
       </div>
       <div class="card table-wrap" id="resTable"></div>`;
@@ -2301,6 +2302,39 @@
             }
           })
           .catch(() => toast("请通过后端服务访问（当前为纯静态模式）"));
+        break;
+      }
+      case "import-resources-json": {
+        if (!window.OFFERFLOW_BACKEND) { toast("请通过后端服务访问（当前为纯静态模式）"); break; }
+        showModal(`
+          <div class="modal-head"><h3>导入校招信息 JSON</h3><button class="icon-btn" data-action="close-modal">${Icon("x")}</button></div>
+          <div class="modal-body">
+            <p style="font-size:13px;color:var(--ink-2);line-height:1.7;margin-bottom:10px">粘贴 JSON 数组，格式见 server/feed.example.json；按「类型 + 公司 + 批次」去重。</p>
+            <textarea id="resImportText" rows="12" placeholder='[{"type":"campus","company":"公司名","batch":"秋招","date":"2026-08-11","roles":"岗位","cities":"城市","link":"","note":""}]'></textarea>
+          </div>
+          <div class="modal-foot"><button class="btn" data-action="close-modal">取消</button><button class="btn btn-primary" data-action="submit-resources-import">${Icon("save")}导入</button></div>`);
+        break;
+      }
+      case "submit-resources-import": {
+        const raw = ($("#resImportText") && $("#resImportText").value) || "";
+        let items;
+        try { items = JSON.parse(raw); } catch (e) { toast("JSON 格式错误"); break; }
+        if (!Array.isArray(items)) { toast("请粘贴 JSON 数组"); break; }
+        const token = window.Auth && Auth.token ? Auth.token() : "";
+        fetch("/api/resources/import", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, token ? { Authorization: "Bearer " + token } : {}),
+          body: JSON.stringify({ items }),
+          cache: "no-store"
+        }).then(r => r.json()).then(d => {
+          if (d.ok) {
+            closeModal();
+            toast("已导入 " + d.added + " 条校招信息");
+            loadRemoteResources();
+          } else {
+            toast(d.error || "导入失败");
+          }
+        }).catch(() => toast("导入请求失败"));
         break;
       }
       case "apply-resource": appFormModal({ company: el.dataset.company, role: el.dataset.role, city: el.dataset.city, channel: "校招官网", status: "意向", applyDate: today(), note: "来自求职资料", link: el.dataset.link || "" }); break;
