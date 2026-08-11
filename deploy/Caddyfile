@@ -1,0 +1,6 @@
+# 把 offerflow.example.com 换成你的域名，Caddy 会自动申请 HTTPS 证书
+
+offerflow.example.com {
+    reverse_proxy 127.0.0.1:8125
+    encode gzip
+}

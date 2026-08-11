@@ -1,0 +1,18 @@
+{
+  "name": "OfferFlow 智能求职面试平台",
+  "short_name": "OfferFlow",
+  "description": "本地优先的招聘面试平台：模拟面试、题库、简历优化、投递管理与复盘报告。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f6f8",
+  "theme_color": "#0e9488",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

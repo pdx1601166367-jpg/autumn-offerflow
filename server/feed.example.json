@@ -1,0 +1,12 @@
+[
+  {
+    "type": "campus",
+    "company": "云端测试公司",
+    "batch": "秋招",
+    "date": "2026-08-11",
+    "roles": "AI 产品经理",
+    "cities": "北京",
+    "link": "https://example.com",
+    "note": "示例数据源条目"
+  }
+]

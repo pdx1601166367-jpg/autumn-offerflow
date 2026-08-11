@@ -1,0 +1,288 @@
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+
+const PORT = Number(process.env.PORT || 8125);
+const ROOT = path.join(__dirname, '..');
+const DATA_DIR = path.join(__dirname, 'data');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+const RESOURCES_FILE = path.join(DATA_DIR, 'resources.json');
+const MAX_BODY = 6 * 1024 * 1024;
+
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.webmanifest': 'application/manifest+json; charset=utf-8'
+};
+
+function ensureData() {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, JSON.stringify({ users: [] }));
+  if (!fs.existsSync(SESSIONS_FILE)) fs.writeFileSync(SESSIONS_FILE, JSON.stringify({ sessions: {} }));
+  if (!fs.existsSync(RESOURCES_FILE)) fs.writeFileSync(RESOURCES_FILE, JSON.stringify({ updatedAt: null, items: [] }));
+}
+
+function readJson(file, fallback) {
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return fallback; }
+}
+
+function writeJson(file, data) {
+  const tmp = file + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+  fs.renameSync(tmp, file);
+}
+
+function hashPassword(password, salt) {
+  return crypto.scryptSync(String(password), salt, 64).toString('hex');
+}
+
+function newToken() {
+  return crypto.randomBytes(24).toString('hex');
+}
+
+function sanitizeState(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const keys = ['profile', 'apps', 'reviews', 'favorites', 'mastered', 'resumes', 'selfTests', 'solved', 'practice', 'tasks'];
+  const out = {};
+  keys.forEach(k => {
+    if (k === 'profile') out[k] = raw[k] && typeof raw[k] === 'object' ? raw[k] : {};
+    else out[k] = Array.isArray(raw[k]) ? raw[k] : [];
+  });
+  return out;
+}
+
+ensureData();
+let users = readJson(USERS_FILE, { users: [] });
+let sessions = readJson(SESSIONS_FILE, { sessions: {} });
+let resources = readJson(RESOURCES_FILE, { updatedAt: null, items: [] });
+
+function saveUsers() { writeJson(USERS_FILE, users); }
+function saveSessions() { writeJson(SESSIONS_FILE, sessions); }
+function saveResources() { writeJson(RESOURCES_FILE, resources); }
+
+const refreshLimit = {};
+
+function refreshRateLimited(ip) {
+  const key = ip || 'unknown';
+  const now = Date.now();
+  refreshLimit[key] = (refreshLimit[key] || []).filter(t => now - t < 3600e3);
+  if (refreshLimit[key].length >= 10) return true;
+  refreshLimit[key].push(now);
+  return false;
+}
+
+function sanitizeResourceItem(raw) {
+  const type = ['campus', 'intern', 'state'].includes(raw.type) ? raw.type : 'campus';
+  return {
+    type,
+    company: String(raw.company || '').trim(),
+    batch: String(raw.batch || '').trim(),
+    date: String(raw.date || '').trim(),
+    roles: String(raw.roles || '').trim(),
+    cities: String(raw.cities || '').trim(),
+    link: String(raw.link || '').trim(),
+    note: String(raw.note || '').trim()
+  };
+}
+
+async function refreshResources(feedUrl) {
+  const res = await fetch(feedUrl, { signal: AbortSignal.timeout(20000) });
+  if (!res.ok) throw new Error('feed fetch failed');
+  const data = await res.json();
+  const incoming = Array.isArray(data) ? data : (data.items || []);
+  let added = 0;
+  incoming.forEach(raw => {
+    const item = sanitizeResourceItem(raw);
+    if (!item.company) return;
+    const dup = resources.items.some(x => x.type === item.type && x.company === item.company && x.batch === item.batch);
+    if (dup) return;
+    resources.items.push(item);
+    added++;
+  });
+  if (incoming.length) resources.updatedAt = new Date().toISOString();
+  saveResources();
+  return { added, total: resources.items.length };
+}
+
+const FEED_URL = process.env.RESOURCES_FEED_URL || '';
+
+function scheduleRefresh() {
+  if (!FEED_URL) return;
+  const last = resources.updatedAt ? new Date(resources.updatedAt).getTime() : 0;
+  if (Date.now() - last > 12 * 3600e3) refreshResources(FEED_URL).catch(() => {});
+  setInterval(() => {
+    const lastTs = resources.updatedAt ? new Date(resources.updatedAt).getTime() : 0;
+    if (Date.now() - lastTs > 12 * 3600e3) refreshResources(FEED_URL).catch(() => {});
+  }, 6 * 3600e3);
+}
+
+function rateLimited(ip) {
+  const key = ip || 'unknown';
+  if (!rateLimit[key]) rateLimit[key] = [];
+  const now = Date.now();
+  rateLimit[key] = rateLimit[key].filter(t => now - t < 60000);
+  if (rateLimit[key].length >= 20) return true;
+  rateLimit[key].push(now);
+  return false;
+}
+const rateLimit = {};
+
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    req.on('data', chunk => {
+      size += chunk.length;
+      if (size > MAX_BODY) { reject(new Error('too large')); req.destroy(); return; }
+      chunks.push(chunk);
+    });
+    req.on('end', () => {
+      try { resolve(chunks.length ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : {}); }
+      catch (e) { reject(new Error('bad json')); }
+    });
+    req.on('error', reject);
+  });
+}
+
+function authUser(req) {
+  const h = req.headers.authorization || '';
+  const token = h.startsWith('Bearer ') ? h.slice(7) : '';
+  const userId = sessions.sessions[token];
+  if (!userId) return null;
+  return users.users.find(u => u.id === userId) || null;
+}
+
+function sendJson(res, code, data) {
+  res.writeHead(code, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Cache-Control': 'no-store'
+  });
+  res.end(JSON.stringify(data));
+}
+
+function serveStatic(req, res, pathname) {
+  let filePath = path.join(ROOT, pathname === '/' ? 'index.html' : pathname);
+  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+    if (pathname === '/' || !path.extname(pathname)) filePath = path.join(ROOT, 'index.html');
+  }
+  fs.readFile(filePath, (err, content) => {
+    if (err) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Not found');
+      return;
+    }
+    const ext = path.extname(filePath).toLowerCase();
+    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    if (filePath === path.join(ROOT, 'index.html')) {
+      content = content.toString('utf8').replace('</body>', '<script>window.OFFERFLOW_BACKEND=true</script></body>');
+    }
+    res.end(content);
+  });
+}
+
+const server = http.createServer(async (req, res) => {
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    });
+    res.end();
+    return;
+  }
+  const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+
+  if (pathname.startsWith('/api/')) {
+    try {
+      if (pathname === '/api/resources' && req.method === 'GET') {
+        return sendJson(res, 200, { items: resources.items, updatedAt: resources.updatedAt });
+      }
+      if (pathname === '/api/resources/refresh' && req.method === 'POST') {
+        if (refreshRateLimited(req.socket.remoteAddress)) return sendJson(res, 429, { error: '刷新过于频繁，请稍后再试' });
+        const body = await readBody(req);
+        const feedUrl = (body && body.feedUrl) || FEED_URL;
+        if (!feedUrl) return sendJson(res, 400, { error: '未配置校招数据源（RESOURCES_FEED_URL）' });
+        try {
+          const r = await refreshResources(feedUrl);
+          return sendJson(res, 200, Object.assign({ ok: true, updatedAt: resources.updatedAt }, r));
+        } catch (e) {
+          return sendJson(res, 502, { error: '数据源抓取失败：' + e.message });
+        }
+      }
+      if (pathname === '/api/register' && req.method === 'POST') {
+        if (rateLimited(req.socket.remoteAddress)) return sendJson(res, 429, { error: '请求过于频繁，请稍后再试' });
+        const body = await readBody(req);
+        const username = String(body.username || '').trim();
+        const password = String(body.password || '');
+        if (!/^[\w\u4e00-\u9fa5-]{2,24}$/.test(username)) return sendJson(res, 400, { error: '用户名需为 2-24 位中英文、数字或下划线' });
+        if (password.length < 6) return sendJson(res, 400, { error: '密码至少 6 位' });
+        if (users.users.some(u => u.username.toLowerCase() === username.toLowerCase())) return sendJson(res, 409, { error: '用户名已存在' });
+        const salt = crypto.randomBytes(16).toString('hex');
+        const user = { id: crypto.randomUUID(), username, salt, passwordHash: hashPassword(password, salt), createdAt: new Date().toISOString(), state: {} };
+        users.users.push(user);
+        saveUsers();
+        const token = newToken();
+        sessions.sessions[token] = user.id;
+        saveSessions();
+        return sendJson(res, 201, { token, user: { id: user.id, username: user.username } });
+      }
+
+      if (pathname === '/api/login' && req.method === 'POST') {
+        if (rateLimited(req.socket.remoteAddress)) return sendJson(res, 429, { error: '请求过于频繁，请稍后再试' });
+        const body = await readBody(req);
+        const username = String(body.username || '').trim();
+        const password = String(body.password || '');
+        const user = users.users.find(u => u.username.toLowerCase() === username.toLowerCase());
+        if (!user || user.passwordHash !== hashPassword(password, user.salt)) return sendJson(res, 401, { error: '用户名或密码错误' });
+        const token = newToken();
+        sessions.sessions[token] = user.id;
+        saveSessions();
+        return sendJson(res, 200, { token, user: { id: user.id, username: user.username } });
+      }
+
+      if (pathname === '/api/logout' && req.method === 'POST') {
+        const h = req.headers.authorization || '';
+        const token = h.startsWith('Bearer ') ? h.slice(7) : '';
+        delete sessions.sessions[token];
+        saveSessions();
+        return sendJson(res, 200, { ok: true });
+      }
+
+      const user = authUser(req);
+      if (!user) return sendJson(res, 401, { error: '请先登录' });
+
+      if (pathname === '/api/me' && req.method === 'GET') {
+        return sendJson(res, 200, { user: { id: user.id, username: user.username } });
+      }
+      if (pathname === '/api/state' && req.method === 'GET') {
+        return sendJson(res, 200, { state: user.state || {} });
+      }
+      if (pathname === '/api/state' && req.method === 'PUT') {
+        const body = await readBody(req);
+        user.state = sanitizeState(body.state);
+        saveUsers();
+        return sendJson(res, 200, { ok: true });
+      }
+      return sendJson(res, 404, { error: 'not found' });
+    } catch (e) {
+      return sendJson(res, 400, { error: e.message === 'too large' ? '数据过大' : '请求格式错误' });
+    }
+  }
+
+  serveStatic(req, res, pathname);
+});
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log('OfferFlow server listening on http://127.0.0.1:' + PORT);
+  scheduleRefresh();
+});

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OfferFlow · 智能求职面试平台</title>
+  <meta name="description" content="OfferFlow 是一套本地优先的招聘面试平台：模拟面试、笔试解题、题库、简历优化、投递管理与复盘报告。">
+  <meta name="theme-color" content="#0e9488">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230e9488'%3E%3Cpath d='M13 2 3 14h9l-1 8 10-12h-9l1-8z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </span>
+        <span class="brand-name">OfferFlow</span>
+        <span class="brand-tag">求职面试平台</span>
+      </div>
+      <nav class="nav" id="nav" aria-label="主导航"></nav>
+      <div class="sidebar-foot">
+        <div class="plan-chip">
+          <span class="dot"></span>
+          <div>
+            <strong>本地优先版</strong>
+            <span>数据保存在浏览器</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menuBtn" data-action="toggle-menu" aria-label="打开菜单">
+          <span data-icon="menu"></span>
+        </button>
+        <div class="crumb" id="crumb"></div>
+        <div class="top-actions">
+          <div class="ai-pill" id="aiPill" title="本地 AI 引擎运行中">
+            <span class="ai-pulse"></span>
+            <span id="aiPillText">本地 AI 在线</span>
+          </div>
+          <button class="icon-btn" data-action="open-settings" aria-label="设置">
+            <span data-icon="settings"></span>
+          </button>
+          <div class="avatar" id="avatarBtn" data-action="open-account">林</div>
+        </div>
+      </header>
+      <main class="view" id="view"></main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modalRoot" hidden></div>
+  <div class="toast-wrap" id="toastRoot" aria-live="polite"></div>
+
+  <script src="js/icons.js"></script>
+  <script src="js/bank-extra.js"></script>
+  <script src="js/bank-extra-2.js"></script>
+  <script src="js/bank-extra-3.js"></script>
+  <script src="js/bank-extra-4.js"></script>
+  <script src="js/bank-detail.js"></script>
+  <script src="js/bank-detail-2.js"></script>
+  <script src="js/bank-detail-3.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function () {});
+      });
+    }
+  </script>
+</body>
+</html>
