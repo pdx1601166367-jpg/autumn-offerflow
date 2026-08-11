@@ -95,6 +95,26 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     ok('weekly report exported', d.suggestedFilename().includes('offerflow-week'));
   });
 
+  await step('agent workbench', async () => {
+    await goto(BASE + '/#/agent');
+    ok('agent nav present', await page.locator('.nav-item[data-id="agent"]').count() === 1);
+    await page.fill('#agentGoal', '帮我准备阿里 AI 产品经理面试，还有 10 天');
+    await page.click('[data-action="run-agent"]');
+    await page.waitForSelector('#agentResultWrap');
+    await page.waitForFunction(() => document.body.innerText.includes('Agent 执行轨迹'));
+    const t = await page.textContent('#agentResultWrap');
+    ok('agent trace shown', t.includes('JD Analysis') && t.includes('Question Recommend'));
+    ok('agent plan shown', t.includes('Day 1'));
+    ok('agent tasks shown', t.includes('建议行动任务'));
+    await page.click('[data-action="agent-confirm-tasks"]');
+    await page.waitForTimeout(300);
+    const taskCount = await page.evaluate(() => JSON.parse(localStorage.getItem('offerflow:v1')).tasks.length);
+    ok('agent tasks created', taskCount > 0);
+    await page.click('[data-action="agent-save-job"]');
+    await page.waitForTimeout(300);
+    ok('agent job saved', await page.evaluate(() => JSON.parse(localStorage.getItem('offerflow:v1')).apps.some(a => a.channel === 'AI Agent')));
+  });
+
   await step('solver', async () => {
     await goto(BASE + '/#/solver');
     await page.fill('#solverInput', '给定整数数组 nums 和目标值 target，找出和为目标值的那两个整数并返回下标，这是经典的两数之和问题。');
@@ -107,6 +127,7 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 
   await step('resume', async () => {
     await goto(BASE + '/#/resume');
+    ok('resume agent button', await page.locator('[data-action="resume-agent"]').count() === 1);
     await page.fill('#resumeText', '张三\n求职意向：前端开发工程师\n教育背景：某大学 计算机科学与技术 本科\n技能：React、Vue、TypeScript、Node.js\n项目经历：主导电商订单模块重构，性能提升40%，覆盖10万用户。\n实习经历：某公司前端实习生，完成日常迭代需求。');
     await page.click('[data-action="diagnose-resume"]');
     await page.waitForSelector('#resumeResult .ring');
@@ -188,6 +209,11 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   await step('reviews seed', async () => {
     await goto(BASE + '/#/reviews');
     ok('reviews seed list', (await page.textContent('#reviewList')).includes('前端'));
+    await page.click('[data-action="agent-review-diagnosis"]');
+    await page.waitForSelector('.modal-head h3', { hasText: 'Agent 复盘诊断' });
+    await page.click('[data-action="diag-create-tasks"]');
+    await page.waitForTimeout(300);
+    ok('review diagnosis tasks created', await page.evaluate(() => JSON.parse(localStorage.getItem('offerflow:v1')).tasks.some(t => t.note === 'Agent 复盘诊断生成')));
     const dp = page.waitForEvent('download');
     await page.locator('[data-action="export-review"]').first().click();
     const d = await dp;

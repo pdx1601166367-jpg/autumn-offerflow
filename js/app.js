@@ -101,10 +101,15 @@
   let syncingOnce = false;
   let remoteRes = null;
   let resUpdatedAt = null;
+  let agentInput = "";
+  let agentShowJd = false;
+  let agentResult = null;
+  let diagIds = [];
   const filters = { bank: { q: "", cat: "全部", diff: "全部", type: "全部", fav: false, master: false }, tracker: { q: "", status: "全部", view: "table" }, res: { tab: "campus", q: "", city: "全部" } };
 
   const NAV = [
     { id: "dashboard", label: "工作台", icon: "dashboard" },
+    { id: "agent", label: "AI 求职 Agent", icon: "bot" },
     { id: "mock", label: "模拟面试", icon: "mic" },
     { id: "solver", label: "笔试解题台", icon: "scan" },
     { id: "bank", label: "面试题库", icon: "book" },
@@ -116,6 +121,7 @@
   ];
   const TITLES = {
     dashboard: ["工作台", "求职进度与今日任务总览"],
+    agent: ["AI 求职 Agent", "提出求职目标，Agent 自动规划、调用工具并生成行动方案"],
     mock: ["AI 模拟面试", "配置面试档案并开始一场真实感训练"],
     solver: ["笔试解题台", "粘贴题目，秒得思路、复杂度与示例代码"],
     bank: ["面试题库", "按方向、难度与题型筛选高频题目"],
@@ -350,6 +356,7 @@
   // ---------- Pages ----------
   const PAGES = {
     dashboard: pageDashboard,
+    agent: pageAgent,
     mock: pageMock,
     solver: pageSolver,
     bank: pageBank,
@@ -508,6 +515,204 @@
         ${D.resources.campus.slice(0, 3).map(r => `
           <div class="list-row"><div class="grow"><h4>${esc(r.company)}</h4><p>${esc(r.batch)} · ${esc(r.cities)}</p></div>${badge(r.batch, r.batch.includes("提前") ? "b-red" : "b-teal")}</div>`).join("")}
       </div>`;
+  }
+
+  function pageAgent() {
+    return `
+      <div class="hero-band">
+        <div class="grow"><h2>今天想完成什么？</h2><p>输入求职目标，Agent 会自主规划、调用工具并生成可执行的行动方案。</p></div>
+        ${badge("Single Agent + Tools", "b-teal")}
+      </div>
+      <div class="card panel" style="margin-bottom:14px">
+        <div class="form-grid">
+          <div class="form-item full"><label>求职目标</label>
+            <textarea id="agentGoal" rows="3" placeholder="例如：帮我准备阿里 AI 产品经理面试，还有 10 天">${esc(agentInput)}</textarea></div>
+          <div class="form-item full"><label>快捷目标</label>
+            <div class="pill-row">
+              ${["准备阿里 AI 产品经理面试", "分析腾讯 AI PM 岗位我适不适合", "还有 10 天面试，帮我安排计划", "帮我诊断能力差距并推荐题目"].map(g => '<button type="button" class="option-chip" data-action="agent-goal" data-value="' + esc(g) + '">' + esc(g) + "</button>").join("")}
+            </div>
+          </div>
+          <div class="form-item full"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="agentShowJd" data-action="agent-toggle-jd" ${agentShowJd ? "checked" : ""} style="accent-color:var(--brand)"> 附带岗位 JD 文本</label></div>
+          ${agentShowJd ? '<div class="form-item full"><label>JD 文本</label><textarea id="agentJdText" rows="5" placeholder="粘贴目标岗位 JD…"></textarea></div>' : ""}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-primary" data-action="run-agent">${Icon("bot")}让 Agent 执行</button>
+        </div>
+      </div>
+      <div id="agentResultWrap">${agentResult ? agentResultHtml(agentResult) : '<div class="card empty">' + Icon("bot") + "<h3>还没有执行任务</h3><p>输入一个求职目标，让 Agent 开始分析。</p></div>"}</div>`;
+  }
+
+  function agentResultHtml(r) {
+    const traceHtml = r.trace.map((t, i) => `
+      <details style="border-bottom:1px solid var(--line-2)">
+        <summary style="cursor:pointer;padding:10px 12px;display:flex;gap:8px;align-items:center">
+          <span style="color:var(--green)">✓</span><b style="font-size:13px">${i + 1}. ${esc(t.label)}</b>
+          <span style="margin-left:auto;color:var(--ink-3);font-size:12px">${esc(t.name)}</span>
+        </summary>
+        <div style="padding:0 12px 10px 34px;font-size:12.5px;color:var(--ink-2);line-height:1.6">${esc(t.detail)}</div>
+      </details>`).join("");
+    const planHtml = r.plan.map((p, i) => `<div class="list-row"><div class="grow"><h4>${esc(p)}</h4></div>${badge("Day " + (i + 1), "b-gray")}</div>`).join("");
+    const qHtml = r.ids.map(id => {
+      const q = D.questions.find(x => x.id === id);
+      if (!q) return "";
+      return `<div class="list-row"><div class="grow"><h4>${esc(q.q)}</h4><div class="q-meta" style="margin-top:4px">${badge(q.cat, "b-teal")}${badge(q.diff, DIFF_COLOR[q.diff])}</div></div>
+        <button class="btn btn-sm" data-action="agent-practice" data-id="${q.id}">${Icon("play")}练习</button></div>`;
+    }).join("");
+    return `
+      <div class="card panel" style="margin-bottom:14px">
+        <div class="panel-head"><div><h2>Agent 执行轨迹</h2><div class="sub">展示每一步调用的工具与中间结果</div></div>${badge(r.ms + "ms 本地执行", "b-gray")}</div>
+        ${traceHtml}
+      </div>
+      <div class="grid grid-2" style="margin-bottom:14px">
+        <div class="card panel">
+          <div class="panel-head"><div><h2>岗位匹配分析</h2><div class="sub">${esc(r.company || "目标企业")} · ${esc(r.role)}</div></div></div>
+          <div class="score-grid" style="grid-template-columns:110px 1fr">
+            ${ringHtml(r.matchScore)}
+            <div>
+              <h4 style="font-size:13px;margin-bottom:6px">优势</h4>
+              ${r.strengths.map(s => '<div style="font-size:13px;color:var(--green);margin:3px 0">✓ ' + esc(s) + "</div>").join("")}
+              <h4 style="font-size:13px;margin:10px 0 6px">缺口</h4>
+              ${r.gaps.map(g => '<div style="font-size:13px;color:var(--amber);margin:3px 0">▲ ' + esc(g) + "</div>").join("") || '<div style="font-size:13px;color:var(--ink-3)">暂无练习数据，建议先完成一次模拟面试</div>'}
+            </div>
+          </div>
+        </div>
+        <div class="card panel">
+          <div class="panel-head"><div><h2>岗位信息</h2><div class="sub">来自 Job Search Tool</div></div>
+            ${r.jobs[0] && r.jobs[0].link ? '<a class="btn btn-sm" href="' + esc(r.jobs[0].link) + '" target="_blank" rel="noopener">' + Icon("link") + "打开</a>" : ""}</div>
+          ${(r.jobs[0] ? '<div class="list-row"><div class="grow"><h4>' + esc(r.jobs[0].company) + "</h4><p>" + esc(r.jobs[0].batch) + " · " + esc(r.jobs[0].roles) + " · " + esc(r.jobs[0].cities) + "</p></div></div>" : "")}
+          <div class="answer-block"><h4>JD 关键要求</h4><p style="line-height:1.7">${esc(r.jd.keywords.join("、"))}</p></div>
+        </div>
+      </div>
+      <div class="card panel" style="margin-bottom:14px">
+        <div class="panel-head"><div><h2>${r.plan.length} 天准备计划</h2><div class="sub">Training Plan Tool 生成，可执行后按日完成</div></div>${badge("动态可调整", "b-teal")}</div>
+        ${planHtml}
+      </div>
+      <div class="grid grid-2" style="margin-bottom:14px">
+        <div class="card panel">
+          <div class="panel-head"><div><h2>推荐训练题目</h2><div class="sub">基于能力缺口推荐</div></div></div>
+          ${qHtml || '<div class="empty">' + Icon("book") + "<h3>暂无可推荐题目</h3></div>"}
+        </div>
+        <div class="card panel">
+          <div class="panel-head"><div><h2>建议行动任务</h2><div class="sub">高风险操作需你确认后执行</div></div>${badge("Human-in-the-loop", "b-amber")}</div>
+          ${r.tasks.map(t => `<div class="list-row"><div class="grow"><h4>${esc(t.title)}</h4><p>${esc(t.note)}</p></div></div>`).join("")}
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" data-action="agent-confirm-tasks">${Icon("check")}确认创建任务</button>
+            <button class="btn" data-action="agent-save-job">${Icon("briefcase")}保存岗位到投递</button>
+            <button class="btn" data-action="agent-practice-all">${Icon("play")}练习推荐题目</button>
+          </div>
+        </div>
+      </div>
+      <div id="agentAiInsight" style="margin-bottom:14px"></div>`;
+  }
+
+  function runAgentAction() {
+    const goal = ($("#agentGoal") && $("#agentGoal").value.trim()) || agentInput;
+    if (!goal) { toast("请输入求职目标"); return; }
+    agentInput = goal;
+    const jd = ($("#agentJdText") && $("#agentJdText").value) || "";
+    const resumeText = S.resumes && S.resumes[0] ? S.resumes[0].text : "";
+    agentResult = window.Agent.runGoal(goal, { jd, resumeText, state: S });
+    render();
+    if (canUseAI()) {
+      const prompt = [
+        { role: "system", content: "你是 OfferFlow 求职 Agent 的决策层。基于本地工具结果，用 120 字以内补充最有价值的一条判断与一个可执行建议，不要重复已有信息。" },
+        { role: "user", content: "目标：" + goal + "\n工具摘要：" + JSON.stringify({ matchScore: agentResult.matchScore, gaps: agentResult.gaps, plan: agentResult.plan.slice(0, 3), tasks: agentResult.tasks.map(t => t.title) }) }
+      ];
+      E.callAI(prompt, S.profile).then(res => {
+        const el = $("#agentAiInsight");
+        if (el && res) el.innerHTML = '<div class="answer-block" style="border-left:3px solid var(--brand)"><h4>Agent 决策洞察</h4><div style="line-height:1.7">' + nl(res) + "</div></div>";
+      });
+    }
+  }
+
+  function confirmAgentTasks() {
+    if (!agentResult) return;
+    const existing = new Set(S.tasks.map(t => t.title));
+    let added = 0;
+    agentResult.tasks.forEach(t => {
+      if (!existing.has(t.title)) {
+        S.tasks.unshift({ id: uid(), title: t.title, note: t.note, done: false });
+        added++;
+      }
+    });
+    save();
+    render();
+    toast("已创建 " + added + " 个任务");
+  }
+
+  function saveAgentJob() {
+    if (!agentResult || !agentResult.company) { toast("未识别目标企业"); return; }
+    const job = agentResult.jobs[0] || {};
+    S.apps.unshift({
+      id: uid(), company: agentResult.company, role: agentResult.role,
+      city: job.cities && job.cities !== "待确认" ? job.cities : "",
+      channel: "AI Agent", status: "意向", applyDate: today(),
+      link: job.link || "", note: "来自 AI 求职 Agent"
+    });
+    save();
+    render();
+    toast("已加入投递管理");
+  }
+
+  function reviewDiagnosis() {
+    const gaps = {};
+    S.reviews.slice(0, 8).forEach(r => (r.improves || []).forEach(g => { gaps[g] = (gaps[g] || 0) + 1; }));
+    const top = Object.entries(gaps).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const weakCats = [...new Set(S.reviews.flatMap(r => (r.turns || []).filter(t => t.score < 60).map(t => t.cat)))];
+    diagIds = window.Agent.recommend(S, weakCats.length ? weakCats : ["AI 产品"], 5);
+    const qRows = diagIds.map(id => {
+      const q = D.questions.find(x => x.id === id);
+      return q ? '<div class="list-row"><div class="grow"><h4>' + esc(q.q) + "</h4><p>" + esc(q.cat) + " · " + esc(q.diff) + "</p></div></div>" : "";
+    }).join("");
+    showModal(`
+      <div class="modal-head"><h3>Agent 复盘诊断</h3><button class="icon-btn" data-action="close-modal">${Icon("x")}</button></div>
+      <div class="modal-body">
+        <p style="font-size:13.5px;line-height:1.7;color:var(--ink-2);margin-bottom:12px">分析最近 ${S.reviews.length} 场复盘，识别重复出现的改进点：</p>
+        ${top.length ? top.map(t => `<div style="padding:9px 12px;border:1px solid var(--line-2);border-radius:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px">${esc(t[0])}</span>${badge("出现 " + t[1] + " 次", t[1] >= 3 ? "b-red" : "b-amber")}</div>`).join("") : '<div class="empty">' + Icon("check-circle") + "<h3>未发现重复问题</h3><p>继续保持当前训练节奏</p></div>"}
+        <h3 style="font-size:14px;margin:16px 0 8px">推荐训练</h3>
+        ${qRows || '<div class="empty">' + Icon("book") + "<h3>暂无可推荐题目</h3></div>"}
+      </div>
+      <div class="modal-foot">
+        <button class="btn" data-action="close-modal">关闭</button>
+        <button class="btn" data-action="diag-create-tasks">${Icon("check")}创建训练任务</button>
+        <button class="btn btn-primary" data-action="diag-practice">${Icon("play")}练习推荐题</button>
+      </div>`, true);
+  }
+
+  async function resumeAgent() {
+    const text = ($("#resumeText") && $("#resumeText").value) || "";
+    const jd = ($("#jdText") && $("#jdText").value) || "";
+    if (!text.trim()) { toast("请先粘贴简历内容"); return; }
+    if (!jd.trim()) { toast("请先粘贴目标岗位 JD"); return; }
+    const box = $("#resumeResult");
+    const before = E.scoreResume(text, jd).score;
+    if (S.profile.aiEnabled && S.profile.apiKey && canUseAI()) {
+      if (box) box.innerHTML = '<div class="empty">' + Icon("bot") + "<h3>Agent 简历优化中…</h3><p>分析 → 改写 → 再评估，最多等待 60 秒</p></div>";
+      const prompt = [
+        { role: "system", content: "你是 AI 产品经理招聘简历 Agent。请完成：1.【优化前匹配分】2.【改写后简历】用 Markdown 输出可直接使用的简历 3.【优化后匹配分】4.【关键改动说明】。先分析再改写再评估，不要客套。" },
+        { role: "user", content: "JD：\n" + jd + "\n\n简历：\n" + text }
+      ];
+      const res = await E.callAI(prompt, S.profile);
+      if (!res) {
+        if (box) box.innerHTML = '<div class="note">' + Icon("alert-circle") + "<span>Agent 调用失败，已回退本地优化。</span></div>";
+        localResumeAgent(text, jd, before, box);
+        return;
+      }
+      if (box) box.innerHTML = '<div class="card panel" style="border-color:var(--line)"><div class="panel-head"><div><h2>Agent 简历优化结果</h2><div class="sub">分析 → 改写 → 再评估</div></div>' + badge("AI 生成", "b-teal") + '</div><div style="margin-top:12px"><textarea id="agentResumeText" rows="16">' + esc(res) + '</textarea><div style="margin-top:10px"><button class="btn btn-primary btn-sm" data-action="apply-agent-resume">' + Icon("check") + "应用改写后简历</button></div></div>";
+    } else {
+      localResumeAgent(text, jd, before, box);
+    }
+  }
+
+  function localResumeAgent(text, jd, before, box) {
+    const r1 = E.scoreResume(text, jd);
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    r1.suggestions.slice(0, 3).forEach((s, i) => {
+      lines.push("Agent 优化 " + (i + 1) + "：" + s.replace(/[。；;]$/, "") + "（示例：主导 XX 项目，XX 指标提升 40%）");
+    });
+    const improved = lines.join("\n");
+    const after = E.scoreResume(improved, jd).score;
+    if (box) box.innerHTML = '<div class="card panel" style="border-color:var(--line)"><div class="panel-head"><div><h2>Agent 简历优化（本地引擎）</h2><div class="sub">分析 → 建议 → 再评估</div></div>' + badge("离线可用", "b-teal") + '</div><div class="score-grid"><div><div class="dim-row"><span>优化前</span><div class="progress"><i style="width:' + before + '%"></i></div><b>' + before + '</b></div><div class="dim-row"><span>优化后</span><div class="progress"><i style="width:' + after + '%;background:var(--green)"></i></div><b>' + after + '</b></div></div><div class="answer-block"><h4>应用建议</h4>' + r1.suggestions.map(s => "<div style='font-size:13px;margin:4px 0'>· " + esc(s) + "</div>").join("") + '</div></div><div class="answer-block" style="margin-top:12px"><h4>优化后简历预览</h4><textarea id="agentResumeText" rows="12">' + esc(improved) + '</textarea><div style="margin-top:10px"><button class="btn btn-primary btn-sm" data-action="apply-agent-resume">' + Icon("check") + "应用到编辑器</button></div></div></div>";
   }
 
   function taskModal(task) {
@@ -1050,6 +1255,7 @@
               <button class="btn" data-action="save-resume">${Icon("save")}保存版本</button>
               <button class="btn" data-action="ai-rewrite">${Icon("bot")}AI 改写</button>
               <button class="btn" data-action="ai-match">${Icon("target")}AI 深度匹配</button>
+              <button class="btn" data-action="resume-agent">${Icon("zap")}Agent 简历优化</button>
               <button class="btn btn-ghost" data-action="load-sample">${Icon("refresh")}载入示例</button>
             </div>
             <div id="resumeResult" style="margin-top:14px"></div>
@@ -1590,6 +1796,7 @@
         ${badge(S.reviews.length + " 场复盘", "b-teal")}
         ${S.reviews.length ? badge("平均 " + Math.round(S.reviews.reduce((s, r) => s + r.score, 0) / S.reviews.length) + " 分", "b-amber") : badge("暂无数据", "b-gray")}
         <div class="grow"></div>
+        <button class="btn btn-sm" data-action="agent-review-diagnosis">${Icon("bot")}Agent 复盘诊断</button>
         <button class="btn btn-sm" data-action="navigate" data-id="mock">${Icon("mic")}再练一场</button>
       </div>
       <div id="reviewList">
@@ -1867,6 +2074,13 @@
     switch (act) {
       case "navigate": navigate(id); break;
       case "toggle-menu": $("#sidebar").classList.toggle("open"); break;
+      case "agent-goal": agentInput = el.dataset.value; runAgentAction(); break;
+      case "agent-toggle-jd": agentShowJd = !!el.checked; render(); break;
+      case "run-agent": runAgentAction(); break;
+      case "agent-confirm-tasks": confirmAgentTasks(); break;
+      case "agent-save-job": saveAgentJob(); break;
+      case "agent-practice": startMockWith([Number(el.dataset.id)]); break;
+      case "agent-practice-all": if (agentResult && agentResult.ids.length) startMockWith(agentResult.ids); break;
       case "open-settings": settingsModal(); break;
       case "open-account": Auth.openAccountModal(); break;
       case "close-modal": closeModal(); break;
@@ -1970,6 +2184,33 @@
       }
       case "ai-rewrite": aiRewrite(); break;
       case "ai-match": aiMatch(false); break;
+      case "agent-review-diagnosis": reviewDiagnosis(); break;
+      case "diag-practice": if (diagIds.length) startMockWith(diagIds); break;
+      case "diag-create-tasks": {
+        const g = {};
+        S.reviews.slice(0, 8).forEach(r => (r.improves || []).forEach(x => { g[x] = (g[x] || 0) + 1; }));
+        const top = Object.entries(g).sort((a, b) => b[1] - a[1]).slice(0, 3);
+        const existing = new Set(S.tasks.map(t => t.title));
+        let added = 0;
+        top.forEach(pair => {
+          const title = "复盘专项：" + pair[0].slice(0, 30);
+          if (!existing.has(title)) { S.tasks.unshift({ id: uid(), title, note: "Agent 复盘诊断生成", done: false }); added++; }
+        });
+        const t2 = "练习推荐题目（" + diagIds.length + " 题）";
+        if (!existing.has(t2)) { S.tasks.unshift({ id: uid(), title: t2, note: "Agent 复盘诊断生成", done: false }); added++; }
+        save();
+        closeModal();
+        render();
+        toast("已创建 " + added + " 个训练任务");
+        break;
+      }
+      case "resume-agent": resumeAgent(); break;
+      case "apply-agent-resume": {
+        const v = $("#agentResumeText") && $("#agentResumeText").value;
+        const ta = $("#resumeText");
+        if (ta && v) { ta.value = v; toast("已应用到简历编辑器"); }
+        break;
+      }
       case "apply-rewrite": {
         const v = $("#aiRewritten") && $("#aiRewritten").value;
         const ta = $("#resumeText");
