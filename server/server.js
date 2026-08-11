@@ -2,6 +2,17 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { scrapeWhitelist } = require('./scraper');
+
+function loadEnvFile() {
+  const p = path.join(__dirname, '.env.local');
+  if (!fs.existsSync(p)) return;
+  fs.readFileSync(p, 'utf8').split(/\r?\n/).forEach(line => {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  });
+}
+loadEnvFile();
 
 const PORT = Number(process.env.PORT || 8125);
 const ROOT = path.join(__dirname, '..');
@@ -9,11 +20,15 @@ const DATA_DIR = path.join(__dirname, 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
 const RESOURCES_FILE = path.join(DATA_DIR, 'resources.json');
+const USAGE_FILE = path.join(DATA_DIR, 'usage.json');
 const MAX_BODY = 6 * 1024 * 1024;
 
 const AI_API_KEY = process.env.AI_API_KEY || process.env.ARK_API_KEY || '';
 const AI_BASE_URL = (process.env.AI_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3').replace(/\/+$/, '');
 const AI_MODEL = process.env.AI_MODEL || 'ep-m-20260607002345-lbn6s';
+const AI_DAILY_LIMIT_PER_USER = Number(process.env.AI_DAILY_LIMIT_PER_USER || 60);
+const AI_GUEST_DAILY = Number(process.env.AI_GUEST_DAILY || 10);
+const WHITELIST_URLS = (process.env.WHITELIST_URLS || '').split(',').map(s => s.trim()).filter(Boolean);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -31,6 +46,7 @@ function ensureData() {
   if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, JSON.stringify({ users: [] }));
   if (!fs.existsSync(SESSIONS_FILE)) fs.writeFileSync(SESSIONS_FILE, JSON.stringify({ sessions: {} }));
   if (!fs.existsSync(RESOURCES_FILE)) fs.writeFileSync(RESOURCES_FILE, JSON.stringify({ updatedAt: null, items: [] }));
+  if (!fs.existsSync(USAGE_FILE)) fs.writeFileSync(USAGE_FILE, JSON.stringify({ date: todayKey(), users: {}, ips: {} }));
 }
 
 function readJson(file, fallback) {
@@ -67,6 +83,24 @@ let users = readJson(USERS_FILE, { users: [] });
 let sessions = readJson(SESSIONS_FILE, { sessions: {} });
 let resources = readJson(RESOURCES_FILE, { updatedAt: null, items: [] });
 let jobRuns = [];
+let usage = readJson(USAGE_FILE, { date: todayKey(), users: {}, ips: {} });
+
+function todayKey() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function saveUsage() { writeJson(USAGE_FILE, usage); }
+
+function consumeQuota(identity, limit) {
+  if (usage.date !== todayKey()) usage = { date: todayKey(), users: {}, ips: {} };
+  const map = identity.startsWith('u:') ? usage.users : usage.ips;
+  const used = map[identity] || 0;
+  if (used >= limit) return false;
+  map[identity] = used + 1;
+  saveUsage();
+  return true;
+}
 
 function saveUsers() { writeJson(USERS_FILE, users); }
 function saveSessions() { writeJson(SESSIONS_FILE, sessions); }
@@ -115,21 +149,28 @@ async function callAIProxy(messages, maxTokens) {
   return { content: data.choices && data.choices[0] ? data.choices[0].message.content : null };
 }
 
-async function refreshResources(feedUrl) {
-  const res = await fetch(feedUrl, { signal: AbortSignal.timeout(20000) });
-  if (!res.ok) throw new Error('feed fetch failed');
-  const data = await res.json();
-  const incoming = Array.isArray(data) ? data : (data.items || []);
+async function refreshResources(feedUrl, whitelistUrl) {
   let added = 0;
-  incoming.forEach(raw => {
+  const merge = raw => {
     const item = sanitizeResourceItem(raw);
     if (!item.company) return;
     const dup = resources.items.some(x => x.type === item.type && x.company === item.company && x.batch === item.batch);
     if (dup) return;
     resources.items.push(item);
     added++;
-  });
-  if (incoming.length) resources.updatedAt = new Date().toISOString();
+  };
+  if (feedUrl) {
+    const res = await fetch(feedUrl, { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error('feed fetch failed');
+    const data = await res.json();
+    const incoming = Array.isArray(data) ? data : (data.items || []);
+    incoming.forEach(merge);
+  }
+  if (whitelistUrl) {
+    const scraped = await scrapeWhitelist(whitelistUrl);
+    scraped.forEach(merge);
+  }
+  if (feedUrl || whitelistUrl) resources.updatedAt = new Date().toISOString();
   saveResources();
   return { added, total: resources.items.length };
 }
@@ -137,17 +178,24 @@ async function refreshResources(feedUrl) {
 const FEED_URL = process.env.RESOURCES_FEED_URL || '';
 
 function scheduleRefresh() {
-  if (!FEED_URL) return;
+  if (!FEED_URL && !WHITELIST_URLS.length) return;
   const check = () => {
     const now = new Date();
     const last = resources.updatedAt ? new Date(resources.updatedAt) : null;
     const stale = !last || (Date.now() - last.getTime() > 12 * 3600e3);
     const dailySlot = now.getHours() === 9;
     const ranToday = last && last.toDateString() === now.toDateString();
+    const run = (label, url) => {
+      refreshResources(url, '')
+        .then(r => recordJob(label, true, r.added))
+        .catch(() => recordJob(label, false, 0));
+    };
     if (stale && dailySlot && !ranToday) {
-      refreshResources(FEED_URL).then(r => recordJob('daily-feed', true, r.added)).catch(() => recordJob('daily-feed', false, 0));
+      if (FEED_URL) run('daily-feed', FEED_URL);
+      WHITELIST_URLS.forEach(u => run('daily-scrape', u));
     } else if (stale) {
-      refreshResources(FEED_URL).then(r => recordJob('feed', true, r.added)).catch(() => recordJob('feed', false, 0));
+      if (FEED_URL) run('feed', FEED_URL);
+      WHITELIST_URLS.forEach(u => run('scrape', u));
     }
   };
   check();
@@ -249,12 +297,19 @@ const server = http.createServer(async (req, res) => {
           resourcesCount: resources.items.length,
           userCount: users.users.length,
           jobRuns: jobRuns.slice(0, 5),
-          nextDailyRun: next.toISOString()
+          nextDailyRun: next.toISOString(),
+          aiCallsToday: Object.values(usage.users || {}).reduce((a, b) => a + b, 0) + Object.values(usage.ips || {}).reduce((a, b) => a + b, 0),
+          quotaPerUser: AI_DAILY_LIMIT_PER_USER,
+          guestQuota: AI_GUEST_DAILY,
+          usageDate: usage.date
         });
       }
       if (pathname === '/api/ai/chat' && req.method === 'POST') {
         if (rateLimited(req.socket.remoteAddress)) return sendJson(res, 429, { error: '请求过于频繁，请稍后再试' });
         const body = await readBody(req);
+        const user = authUser(req);
+        const identity = user ? 'u:' + user.id : 'ip:' + req.socket.remoteAddress;
+        if (!consumeQuota(identity, user ? AI_DAILY_LIMIT_PER_USER : AI_GUEST_DAILY)) return sendJson(res, 429, { error: '今日 AI 调用次数已达上限' });
         if (!Array.isArray(body.messages) || !body.messages.length) return sendJson(res, 400, { error: 'messages 不能为空' });
         try {
           const r = await callAIProxy(body.messages, body.max_tokens);
@@ -267,6 +322,9 @@ const server = http.createServer(async (req, res) => {
       if (pathname === '/api/ai/vision' && req.method === 'POST') {
         if (rateLimited(req.socket.remoteAddress)) return sendJson(res, 429, { error: '请求过于频繁，请稍后再试' });
         const body = await readBody(req);
+        const user = authUser(req);
+        const identity = user ? 'u:' + user.id : 'ip:' + req.socket.remoteAddress;
+        if (!consumeQuota(identity, user ? AI_DAILY_LIMIT_PER_USER : AI_GUEST_DAILY)) return sendJson(res, 429, { error: '今日 AI 调用次数已达上限' });
         if (!body.image) return sendJson(res, 400, { error: '缺少图片' });
         try {
           const r = await callAIProxy([
@@ -286,13 +344,14 @@ const server = http.createServer(async (req, res) => {
         if (refreshRateLimited(req.socket.remoteAddress)) return sendJson(res, 429, { error: '刷新过于频繁，请稍后再试' });
         const body = await readBody(req);
         const feedUrl = (body && body.feedUrl) || FEED_URL;
-        if (!feedUrl) return sendJson(res, 400, { error: '未配置校招数据源（RESOURCES_FEED_URL）' });
+        const whitelistUrl = (body && body.whitelistUrl) || '';
+        if (!feedUrl && !whitelistUrl && !WHITELIST_URLS.length) return sendJson(res, 400, { error: '未配置校招数据源（RESOURCES_FEED_URL / WHITELIST_URLS）' });
         try {
-          const r = await refreshResources(feedUrl);
-          recordJob('manual-refresh', true, r.added);
+          const r = await refreshResources(feedUrl || '', whitelistUrl || '');
+          recordJob(whitelistUrl ? 'manual-scrape' : 'manual-refresh', true, r.added);
           return sendJson(res, 200, Object.assign({ ok: true, updatedAt: resources.updatedAt }, r));
         } catch (e) {
-          recordJob('manual-refresh', false, 0);
+          recordJob(whitelistUrl ? 'manual-scrape' : 'manual-refresh', false, 0);
           return sendJson(res, 502, { error: '数据源抓取失败：' + e.message });
         }
       }

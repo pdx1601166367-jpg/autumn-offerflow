@@ -1,4 +1,6 @@
 server/data/
+server/.env.local
+backups/
 node_modules/
 .DS_Store
 *.log

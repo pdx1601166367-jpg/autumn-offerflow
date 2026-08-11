@@ -32,10 +32,14 @@
 分享给同学使用（多人账号 + 云同步）需要运行 Node 后端：
 
 ```bash
-node server/server.js
+# Windows
+.\scripts\start-local.ps1
+
+# Linux / macOS
+bash scripts/start-local.sh
 ```
 
-默认监听 `http://127.0.0.1:8125`，同时提供前端页面与 API（注册、登录、状态同步）。用户数据保存在 `server/data/`（已加入 `.gitignore`），密码使用 scrypt 加盐哈希存储。
+首次启动会自动生成 `server/.env.local`（参考 `server/.env.example`），填写豆包 Key 后重启服务即可。默认监听 `http://127.0.0.1:8125`，同时提供前端页面与 API（注册、登录、状态同步、AI 网关、校招抓取）。用户数据保存在 `server/data/`（已加入 `.gitignore`），密码使用 scrypt 加盐哈希存储，`.env.local` 同样不入库。
 
 本地静态服务器（仅单机模式）：
 
@@ -48,6 +52,8 @@ python -m http.server 8123
 当前本地服务：单机静态版 `http://127.0.0.1:8123/`，多人版 `http://127.0.0.1:8125/`
 
 ## 部署上线
+
+当前按“先本地跑”规划：`scripts/start-local.ps1` / `scripts/start-local.sh` 一键启动，同学连同一局域网访问 `http://本机IP:8125` 即可。项目后续可直接推送到 GitHub 仓库（`server/data/`、`server/.env.local` 已被忽略，不会泄露用户数据与 Key）。
 
 多人版需要能运行 Node 并持久化磁盘的托管（如腾讯云轻量服务器、Render、Railway、VPS），部署后设置 `PORT` 环境变量，并用反向代理（Nginx/Caddy）配置 HTTPS。单机纯静态版可直接部署到任意静态托管：
 
@@ -105,6 +111,10 @@ RESOURCES_FEED_URL=https://你的数据源地址/campus-feed.json node server/se
 
 求职资料页还支持「导入 JSON」（登录后），适合人工运营 + 批量导入；后端每日定时任务会在 09:00 执行抓取，运行记录与下次执行时间通过 `/api/system/status` 可查（`jobRuns` / `nextDailyRun`）。
 
+**白名单抓取器（方案 B）**：`server/scraper.js` 支持两种模式——页面含 JSON-LD JobPosting 时结构化提取；否则按链接文本关键词（校招/秋招/实习/招聘）提取。把白名单页面 URL 配置到 `WHITELIST_URLS`（逗号分隔）即可每日抓取，示例见 `server/sources/whitelist.example.json`，抓取验证见 `scripts/scraper-test.js`。正式站点需要按页面结构调整适配，属于持续维护项。
+
+**AI 配额（按 10 人规模预估）**：`AI_DAILY_LIMIT_PER_USER=60`（登录用户每天 60 次），`AI_GUEST_DAILY=10`（访客每天 10 次），用量记录在 `server/data/usage.json`，今日调用量通过 `/api/system/status` 的 `aiCallsToday` 查看。
+
 ## 测试
 
 冒烟测试覆盖今日任务增删改、模拟面试（自定义题量、参考答案、语音按钮）、AI 点评与 AI 追问、AI 笔试解析、简历诊断/图片/深度匹配、投递新增与链接、看板编辑、CSV 导入、JSON 备份导出/导入、题库结构、自测、资源官网链接、多端溢出与控制台报错：
@@ -141,6 +151,12 @@ node scripts/agent-eval.js
 node scripts/ai-backend-test.js
 ```
 
+白名单抓取器测试（需本地服务运行在 8125）：
+
+```bash
+node scripts/scraper-test.js
+```
+
 ## 文件结构
 
 ```text
@@ -161,10 +177,16 @@ scripts/smoke.js   Playwright 冒烟测试
 scripts/mock-ai-server.js   本地模拟 OpenAI 兼容接口，用于离线验证 AI 链路
 scripts/multi-user-test.js   多账号注册、数据隔离与云同步测试
 scripts/ai-realtime-test.js   真实豆包 AI 全链路测试
+scripts/ai-backend-test.js   后端 AI 网关与真 Agent 实测
+scripts/scraper-test.js      白名单抓取器测试（JSON-LD + 链接双模式）
+scripts/start-local.ps1 / start-local.sh   本地一键启动
 scripts/agent-eval-data.js   Agent 标准任务评测集（12 例）
 scripts/agent-eval.js        Agent 评估脚本（任务成功率/工具准确率/规划准确率）
-scripts/ai-backend-test.js   后端 AI 网关与真 Agent 实测
 server/server.js   多人版 Node 后端（静态资源 + 注册登录 + 状态同步 + 校招数据源）
+server/scraper.js   白名单抓取器（JSON-LD / 链接文本）
+server/sources/whitelist.example.json   白名单配置示例
+server/sources/fixture.html   抓取器测试夹具
+server/.env.example   本地环境变量示例（复制为 .env.local）
 server/feed.example.json   校招数据源格式示例
 deploy/            部署配套（Docker/systemd/Nginx/Caddy/备份）
 manifest.webmanifest   PWA 安装清单
