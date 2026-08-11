@@ -21,6 +21,7 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
 const RESOURCES_FILE = path.join(DATA_DIR, 'resources.json');
 const USAGE_FILE = path.join(DATA_DIR, 'usage.json');
+const WHITELIST_CONFIG_FILE = path.join(__dirname, 'sources', 'whitelist.json');
 const MAX_BODY = 6 * 1024 * 1024;
 
 const AI_API_KEY = process.env.AI_API_KEY || process.env.ARK_API_KEY || '';
@@ -111,6 +112,14 @@ function recordJob(type, ok, added) {
   jobRuns = jobRuns.slice(0, 20);
 }
 
+function whitelistEntries() {
+  try {
+    const arr = JSON.parse(fs.readFileSync(WHITELIST_CONFIG_FILE, 'utf8'));
+    if (Array.isArray(arr) && arr.length) return arr;
+  } catch (e) {}
+  return WHITELIST_URLS.map(url => ({ url, render: false }));
+}
+
 const refreshLimit = {};
 
 function refreshRateLimited(ip) {
@@ -149,7 +158,7 @@ async function callAIProxy(messages, maxTokens) {
   return { content: data.choices && data.choices[0] ? data.choices[0].message.content : null };
 }
 
-async function refreshResources(feedUrl, whitelistUrl) {
+async function refreshResources(feedUrl, entries) {
   let added = 0;
   const merge = raw => {
     const item = sanitizeResourceItem(raw);
@@ -166,11 +175,12 @@ async function refreshResources(feedUrl, whitelistUrl) {
     const incoming = Array.isArray(data) ? data : (data.items || []);
     incoming.forEach(merge);
   }
-  if (whitelistUrl) {
-    const scraped = await scrapeWhitelist(whitelistUrl);
+  const list = Array.isArray(entries) ? entries : [];
+  for (const e of list) {
+    const scraped = await scrapeWhitelist(e.url, { company: e.company, render: !!e.render, timeoutMs: 30000 });
     scraped.forEach(merge);
   }
-  if (feedUrl || whitelistUrl) resources.updatedAt = new Date().toISOString();
+  if (feedUrl || list.length) resources.updatedAt = new Date().toISOString();
   saveResources();
   return { added, total: resources.items.length };
 }
@@ -185,17 +195,12 @@ function scheduleRefresh() {
     const stale = !last || (Date.now() - last.getTime() > 12 * 3600e3);
     const dailySlot = now.getHours() === 9;
     const ranToday = last && last.toDateString() === now.toDateString();
-    const run = (label, url) => {
-      refreshResources(url, '')
-        .then(r => recordJob(label, true, r.added))
-        .catch(() => recordJob(label, false, 0));
-    };
     if (stale && dailySlot && !ranToday) {
-      if (FEED_URL) run('daily-feed', FEED_URL);
-      WHITELIST_URLS.forEach(u => run('daily-scrape', u));
+      if (FEED_URL) refreshResources(FEED_URL, '').then(r => recordJob('daily-feed', true, r.added)).catch(() => recordJob('daily-feed', false, 0));
+      whitelistEntries().forEach(e => refreshResources('', [e]).then(r => recordJob('daily-scrape', true, r.added)).catch(() => recordJob('daily-scrape', false, 0)));
     } else if (stale) {
-      if (FEED_URL) run('feed', FEED_URL);
-      WHITELIST_URLS.forEach(u => run('scrape', u));
+      if (FEED_URL) refreshResources(FEED_URL, '').then(r => recordJob('feed', true, r.added)).catch(() => recordJob('feed', false, 0));
+      whitelistEntries().forEach(e => refreshResources('', [e]).then(r => recordJob('scrape', true, r.added)).catch(() => recordJob('scrape', false, 0)));
     }
   };
   check();
@@ -347,11 +352,24 @@ const server = http.createServer(async (req, res) => {
         const whitelistUrl = (body && body.whitelistUrl) || '';
         if (!feedUrl && !whitelistUrl && !WHITELIST_URLS.length) return sendJson(res, 400, { error: '未配置校招数据源（RESOURCES_FEED_URL / WHITELIST_URLS）' });
         try {
-          const r = await refreshResources(feedUrl || '', whitelistUrl || '');
-          recordJob(whitelistUrl ? 'manual-scrape' : 'manual-refresh', true, r.added);
-          return sendJson(res, 200, Object.assign({ ok: true, updatedAt: resources.updatedAt }, r));
+          let added = 0;
+          let total = resources.items.length;
+          if (feedUrl) {
+            const r = await refreshResources(feedUrl, '');
+            added += r.added;
+            total = r.total;
+            recordJob('manual-refresh', true, r.added);
+          }
+          const wl = whitelistUrl ? [{ url: whitelistUrl, render: false }] : whitelistEntries();
+          for (const e of wl) {
+            const r = await refreshResources('', [e]);
+            added += r.added;
+            total = r.total;
+            recordJob('manual-scrape', true, r.added);
+          }
+          return sendJson(res, 200, { ok: true, added, total, updatedAt: resources.updatedAt });
         } catch (e) {
-          recordJob(whitelistUrl ? 'manual-scrape' : 'manual-refresh', false, 0);
+          recordJob('manual-sources', false, 0);
           return sendJson(res, 502, { error: '数据源抓取失败：' + e.message });
         }
       }

@@ -1,0 +1,20 @@
+[
+  {
+    "company": "华为",
+    "url": "https://career.huawei.com/reccampportal/portal5/campus-recruitment.html",
+    "render": false,
+    "note": "服务端 HTML 可直接解析"
+  },
+  {
+    "company": "腾讯",
+    "url": "https://careers.tencent.com/zh-cn/jobopportunity.html",
+    "render": true,
+    "note": "JS 渲染，需 Playwright（本地已验证可安装）"
+  },
+  {
+    "company": "字节跳动",
+    "url": "https://jobs.bytedance.com/experienced/position/list",
+    "render": true,
+    "note": "JS 渲染，需 Playwright"
+  }
+]

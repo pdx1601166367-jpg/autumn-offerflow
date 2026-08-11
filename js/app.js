@@ -573,7 +573,7 @@
     return `
       <div class="card panel" style="margin-bottom:14px">
         <div class="panel-head"><div><h2>Agent 执行轨迹</h2><div class="sub">${r.mode === "ai" ? "LLM 决策 + 工具执行 + 中间结果回喂" : "本地规则引擎（降级模式）"}</div></div>
-          ${badge(r.mode === "ai" ? "AI 驱动 · " + (r.steps ? r.steps.length : 0) + " 步决策" : "本地降级", r.mode === "ai" ? "b-teal" : "b-gray")}</div>
+          ${badge(r.mode === "ai" ? "AI 驱动 · " + (r.steps ? r.steps.length : 0) + " 步决策" + (r.reportSource === "llm" ? " · 报告 LLM 生成" : "") : "本地降级", r.mode === "ai" ? "b-teal" : "b-gray")}</div>
         ${traceHtml}
         ${r.narrative ? '<div class="answer-block" style="margin-top:10px;border-left:3px solid var(--brand)"><h4>Agent 最终结论</h4><div style="line-height:1.7">' + nl(r.narrative) + "</div></div>" : ""}
       </div>

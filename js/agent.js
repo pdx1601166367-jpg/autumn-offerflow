@@ -267,10 +267,34 @@
       messages.push({ role: "assistant", content: JSON.stringify({ next_tool: parsed.next_tool, reasoning: parsed.reasoning || "" }) });
       messages.push({ role: "user", content: "Tool " + parsed.next_tool + " 返回：" + JSON.stringify(toolResult.data).slice(0, 2500) });
     }
-    if (!steps.length) {
-      return null;
+    if (!steps.length) return null;
+    let r = final && final.result ? final.result : {};
+    let reportSource = "llm";
+    const hasCompleteReport = r && Array.isArray(r.plan) && r.plan.length && (Array.isArray(r.strengths) || Array.isArray(r.gaps));
+    if (!hasCompleteReport) {
+      const reportPrompt = [
+        { role: "system", content: "你是 OfferFlow 求职 Agent 的报告生成器。基于工具返回的真实数据输出 JSON：{\"matchScore\":0-100,\"strengths\":[\"...\"],\"gaps\":[\"...\"],\"plan\":[\"Day 1：...\"],\"tasks\":[{\"title\":\"...\",\"note\":\"...\"}],\"narrative\":\"最终结论\"}。只输出 JSON，不要 Markdown，不要编造数据。" },
+        { role: "user", content: JSON.stringify({
+          goal: goalText,
+          jobs: ctx.jobs,
+          jd: ctx.jd,
+          resumeScore: ctx.resume ? ctx.resume.score : null,
+          resumeDims: ctx.resume ? ctx.resume.dims : null,
+          capability: ctx.cap,
+          reviewMemory: ctx.mem,
+          questionIds: ctx.ids
+        }).slice(0, 4500) }
+      ];
+      const raw = await E.callAI(reportPrompt, profile);
+      const parsed = parseAgentResponse(raw);
+      if (parsed && (parsed.result || typeof parsed.matchScore === "number")) {
+        r = parsed.result || parsed;
+      } else {
+        reportSource = "local-degraded";
+      }
+      trace.push({ type: "llm", step: steps.length + 1, reasoning: "生成最终报告", nextTool: "generate_report", detail: reportSource === "llm" ? "报告由大模型生成" : "大模型报告生成失败，使用本地兜底并明确标注" });
+      steps.push({ reasoning: "生成最终报告", tool: "generate_report", summary: reportSource === "llm" ? "报告由大模型生成" : "本地兜底" });
     }
-    const r = final && final.result ? final.result : {};
     const cap = ctx.cap || capability(state);
     const plan = Array.isArray(r.plan) && r.plan.length ? r.plan : ctx.plan;
     const tasks = Array.isArray(r.tasks) && r.tasks.length ? r.tasks.map(t => typeof t === "string" ? { title: t, note: "Agent 生成" } : t) : ctx.tasks;
@@ -284,7 +308,7 @@
     return {
       goal, jobs: ctx.jobs.length ? ctx.jobs : localJobSearch(goal, state), jd: ctx.jd || jdAnalysis(goal, opts),
       resume: ctx.resume, matchScore, cap, mem: ctx.mem || reviewMemory(state), ids, plan, tasks, strengths, gaps,
-      trace, steps, ms: 0, mode: "ai", deterministic: false, company: goal.company, role: goal.role,
+      trace, steps, ms: 0, mode: "ai", reportSource, deterministic: false, company: goal.company, role: goal.role,
       narrative: r.narrative || ""
     };
   }

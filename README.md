@@ -109,7 +109,7 @@ RESOURCES_FEED_URL=https://你的数据源地址/campus-feed.json node server/se
 
 求职资料页还支持「导入 JSON」（登录后），适合人工运营 + 批量导入；后端每日定时任务会在 09:00 执行抓取，运行记录与下次执行时间通过 `/api/system/status` 可查（`jobRuns` / `nextDailyRun`）。
 
-**白名单抓取器（方案 B）**：`server/scraper.js` 支持两种模式——页面含 JSON-LD JobPosting 时结构化提取；否则按链接文本关键词（校招/秋招/实习/招聘）提取。把白名单页面 URL 配置到 `WHITELIST_URLS`（逗号分隔）即可每日抓取，示例见 `server/sources/whitelist.example.json`，抓取验证见 `scripts/scraper-test.js`。正式站点需要按页面结构调整适配，属于持续维护项。
+**白名单抓取器（方案 B）**：`server/scraper.js` 支持两种模式——页面含 JSON-LD JobPosting 时结构化提取；否则按链接文本关键词（校招/秋招/实习/招聘）提取。`server/sources/whitelist.json` 为白名单配置（`url` / `company` / `render`），`render: true` 的站点会用无头浏览器渲染后再解析（本机自动使用系统 Chrome/Edge，可通过 `PLAYWRIGHT_CHROME` 指定）。已内置华为（HTML 直抓）、腾讯与字节（JS 渲染）三个真实站点并实测抓取入库；不同站点结构不同，需要持续维护适配。抓取验证见 `scripts/scraper-test.js`。
 
 **AI 配额（按 10 人规模预估）**：`AI_DAILY_LIMIT_PER_USER=60`（登录用户每天 60 次），`AI_GUEST_DAILY=10`（访客每天 10 次），用量记录在 `server/data/usage.json`，今日调用量通过 `/api/system/status` 的 `aiCallsToday` 查看。
 

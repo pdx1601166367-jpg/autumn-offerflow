@@ -7,6 +7,36 @@ async function fetchText(url, timeoutMs) {
   return res.text();
 }
 
+let pwModule = null;
+function tryRequire(name) {
+  try { return require(name); } catch (e) { return null; }
+}
+
+async function renderHtml(url) {
+  if (!pwModule) pwModule = tryRequire('playwright');
+  if (!pwModule || !pwModule.chromium) return null;
+  const fs = require('fs');
+  const candidates = [
+    process.env.PLAYWRIGHT_CHROME || '',
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
+  ].filter(Boolean);
+  const executablePath = candidates.find(p => fs.existsSync(p));
+  const launchOpts = { headless: true, args: ['--no-sandbox'] };
+  if (executablePath) launchOpts.executablePath = executablePath;
+  const browser = await pwModule.chromium.launch(launchOpts);
+  try {
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 25000 });
+    await page.waitForTimeout(1500);
+    return await page.content();
+  } finally {
+    await browser.close();
+  }
+}
+
 function decodeEntities(s) {
   return String(s || '')
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
@@ -84,7 +114,14 @@ async function scrapeWhitelist(url, opts) {
   }
   const jsonLd = fromJsonLd(text, url);
   const links = fromLinks(text, url, opts.company);
-  return jsonLd.concat(links);
+  let items = jsonLd.concat(links);
+  if (!items.length && opts.render) {
+    const rendered = await renderHtml(url);
+    if (rendered) {
+      items = fromJsonLd(rendered, url).concat(fromLinks(rendered, url, opts.company));
+    }
+  }
+  return items;
 }
 
-module.exports = { scrapeWhitelist, fromLinks, fromJsonLd };
+module.exports = { scrapeWhitelist, fromLinks, fromJsonLd, renderHtml };
