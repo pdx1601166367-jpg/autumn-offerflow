@@ -261,7 +261,13 @@
   }
 
   function canUseAI() {
-    if (window.OFFERFLOW_BACKEND) return true;
+    if (window.OFFERFLOW_BACKEND) {
+      if (window.OFFERFLOW_AI_READY === false) {
+        toast("云端 AI 未配置，请联系管理员在服务端配置 AI_API_KEY");
+        return false;
+      }
+      return true;
+    }
     if (!S.profile.aiEnabled || !S.profile.apiKey) return false;
     if (window.Auth && Auth.user()) return true;
     const key = "offerflow:aiq:" + today();
@@ -338,7 +344,10 @@
     const pill = $("#aiPillText");
     if (pill) {
       let pt = window.Auth && Auth.token() ? "云同步已开启" : "";
-      if (window.OFFERFLOW_BACKEND) pt = pt ? pt + " · 云端 AI" : "云端 AI 已启用";
+      if (window.OFFERFLOW_BACKEND) {
+        const aiState = window.OFFERFLOW_AI_READY === false ? "云端 AI 未配置" : "云端 AI 已启用";
+        pt = pt ? pt + " · " + aiState : aiState;
+      }
       else if (S.profile.aiEnabled && S.profile.apiKey) pt = pt ? pt + " · AI 已启用" : "AI 接口已启用";
       pill.textContent = pt || "本地 AI 在线";
     }
@@ -706,7 +715,7 @@
     if (!jd.trim()) { toast("请先粘贴目标岗位 JD"); return; }
     const box = $("#resumeResult");
     const before = E.scoreResume(text, jd).score;
-    if (S.profile.aiEnabled && S.profile.apiKey && canUseAI()) {
+    if (canUseAI()) {
       if (box) box.innerHTML = '<div class="empty">' + Icon("bot") + "<h3>Agent 简历优化中…</h3><p>分析 → 改写 → 再评估，最多等待 60 秒</p></div>";
       const prompt = [
         { role: "system", content: "你是 AI 产品经理招聘简历 Agent。请完成：1.【优化前匹配分】2.【改写后简历】用 Markdown 输出可直接使用的简历 3.【优化后匹配分】4.【关键改动说明】。先分析再改写再评估，不要客套。" },
@@ -1321,8 +1330,7 @@
     const text = ($("#resumeText") && $("#resumeText").value) || "";
     if (!text.trim()) { toast("请先粘贴简历内容"); return; }
     const p = S.profile;
-    if (!p.aiEnabled || !p.apiKey) { toast("请先在设置中开启并配置 AI 接口"); return; }
-    if (!canUseAI()) return;
+    if (!canUseAI()) { toast("AI 不可用：多人版请确认服务端已配置 AI_API_KEY，单机版请在设置中启用"); return; }
     const box = $("#resumeResult");
     box.innerHTML = '<div class="empty">' + Icon("sparkles") + "<h3>AI 改写中…</h3><p>最多等待 25 秒</p></div>";
     E.callAI([
@@ -1339,8 +1347,7 @@
     const jd = ($("#jdText") && $("#jdText").value) || "";
     if (!text.trim()) { toast("请先粘贴简历内容"); return; }
     if (!jd.trim()) { toast("请先粘贴目标岗位 JD"); return; }
-    if (!S.profile.aiEnabled || !S.profile.apiKey) { toast("请先在设置中开启并配置 AI 接口"); return; }
-    if (!canUseAI()) return;
+    if (!canUseAI()) { toast("AI 不可用：多人版请确认服务端已配置 AI_API_KEY，单机版请在设置中启用"); return; }
     const box = $("#resumeResult");
     if (box) box.innerHTML = '<div class="empty">' + Icon("bot") + "<h3>AI 深度匹配中…</h3><p>正在分析岗位匹配度，最多等待 40 秒</p></div>";
     const prompt = [
@@ -1391,8 +1398,7 @@
 
   async function ocrResume() {
     if (!resumeImage) { toast("请先选择简历图片"); return; }
-    if (!S.profile.aiEnabled || !S.profile.apiKey) { toast("请先在设置中启用并配置 AI 接口"); return; }
-    if (!canUseAI()) return;
+    if (!canUseAI()) { toast("AI 不可用：多人版请确认服务端已配置 AI_API_KEY，单机版请在设置中启用"); return; }
     const box = $("#resumeImgPreview");
     if (!box) return;
     const note = document.createElement("div");
@@ -1730,13 +1736,13 @@
       <div class="tabs">
         ${[["campus", "校招信息汇总"], ["intern", "实习信息表"], ["state", "国央企信息表"]].map(([k, t]) => '<button class="tab ' + (f.tab === k ? "active" : "") + '" data-action="tab-res" data-value="' + k + '">' + t + "</button>").join("")}
       </div>
-      <div class="note">${Icon("lightbulb")}<span>内置演示数据；部署后端并配置 RESOURCES_FEED_URL 数据源后，可每日自动抓取校招信息并合并到表格。</span></div>
+      <div class="note">${Icon("lightbulb")}<span>${resUpdatedAt ? "云端聚合数据（白名单官网抓取 + Feed + 人工导入），最后更新：" + String(resUpdatedAt).slice(0, 16) : (window.OFFERFLOW_BACKEND ? "后端已连接，点击「立即抓取」从白名单官网与 Feed 拉取真实校招信息。" : "单机模式：内置演示数据；部署后端后可配置数据源每日自动抓取。")}</span></div>
       <div class="card" style="margin-bottom:14px">
         <div class="toolbar">
           <div class="search-box">${Icon("search")}<input id="resSearch" placeholder="搜索公司 / 岗位…" value="${esc(f.q)}"></div>
           <select class="field" id="resCity">${resCityOptions(key)}</select>
           <div class="grow"></div>${badge(title, "b-teal")}
-          <span class="badge b-gray" id="resSyncBadge">${resUpdatedAt ? "云端已同步 · " + String(resUpdatedAt).slice(5, 16) : "内置演示数据"}</span>
+          <span class="badge b-gray" id="resSyncBadge">${resUpdatedAt ? "云端数据 " + resData(key).length + " 条 · " + String(resUpdatedAt).slice(5, 16) : "内置演示数据"}</span>
           <button class="btn btn-sm" data-action="refresh-resources">${Icon("refresh")}立即抓取</button>
           ${window.OFFERFLOW_BACKEND ? '<button class="btn btn-sm" data-action="import-resources-json">' + Icon("upload") + "导入 JSON</button>" : ""}
         </div>
@@ -1763,9 +1769,7 @@
       if (d && Array.isArray(d.items)) {
         remoteRes = d.items;
         resUpdatedAt = d.updatedAt;
-        const badge = $("#resSyncBadge");
-        if (badge) badge.textContent = resUpdatedAt ? "云端已同步 · " + String(resUpdatedAt).slice(5, 16) : "内置演示数据";
-        updateResTable();
+        render();
       }
     } catch (e) {}
   }
@@ -2402,4 +2406,10 @@
   checkReminders();
   setInterval(checkReminders, 60000);
   if (window.Auth) Auth.check();
+  if (window.OFFERFLOW_BACKEND) {
+    fetch("/api/system/status", { cache: "no-store" }).then(r => r.json()).then(s => {
+      window.OFFERFLOW_AI_READY = !!(s && s.aiConfigured);
+      render();
+    }).catch(() => { window.OFFERFLOW_AI_READY = true; });
+  }
 })();

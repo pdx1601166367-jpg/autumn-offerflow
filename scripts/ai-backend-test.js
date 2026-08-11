@@ -62,6 +62,24 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     ok('backend agent retrieves imported job', t.includes('LLM 决策') && t.includes('云端检索公司'));
   });
 
+  await step('resources cloud note', async () => {
+    await page.goto(BASE + '/#/resources', { waitUntil: 'load' });
+    await page.waitForSelector('#resSyncBadge');
+    await page.waitForFunction(() => document.querySelector('#resSyncBadge').textContent.includes('云端数据'), null, { timeout: 10000 });
+    const t = await page.textContent('#view');
+    ok('resources note reflects cloud data', t.includes('云端聚合数据') && !t.includes('内置演示数据'));
+  });
+
+  await step('backend ai rewrite without user key', async () => {
+    await page.goto(BASE + '/#/resume', { waitUntil: 'load' });
+    await page.waitForTimeout(250);
+    await page.fill('#resumeText', '张三\n求职意向：AI 产品经理\n技能：RAG、评测集\n项目：主导智能客服，人工介入率降 25%。');
+    await page.fill('#jdText', 'AI 产品经理：熟悉大模型应用、RAG、数据分析。');
+    await page.click('[data-action="ai-rewrite"]');
+    await page.waitForSelector('#aiRewritten', { timeout: 90000 });
+    ok('backend ai rewrite works without user key', (await page.inputValue('#aiRewritten')).length > 30);
+  });
+
   await step('backend solver ai', async () => {
     await page.goto(BASE + '/#/solver', { waitUntil: 'load' });
     await page.waitForTimeout(250);

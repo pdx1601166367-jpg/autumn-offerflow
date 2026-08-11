@@ -98,7 +98,7 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   await step('resources cloud sync badge', async () => {
     await page.goto(BASE + '/#/resources', { waitUntil: 'load' });
     await page.waitForSelector('#resSyncBadge');
-    await page.waitForFunction(() => document.querySelector('#resSyncBadge').textContent.includes('云端已同步'), null, { timeout: 10000 });
+    await page.waitForFunction(() => document.querySelector('#resSyncBadge').textContent.includes('云端数据'), null, { timeout: 10000 });
     ok('resources cloud sync badge', true);
   });
 
