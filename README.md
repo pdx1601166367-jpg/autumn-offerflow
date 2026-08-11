@@ -94,9 +94,7 @@ API Base URL: https://ark.cn-beijing.volces.com/api/v3
 模型/接入点 ID: ep-m-20260607002345-lbn6s
 ```
 
-只需再粘贴 API Key 并启用即可。该组合已经用真实接口验证过：模拟面试 AI 点评、AI 连续追问、简历 AI 改写全部通过，浏览器直连无跨域问题。Key 只保存在浏览器 localStorage，不会写入代码。
-
-多人版（推荐 SaaS 形态）不需要用户配置 Key：在服务器环境变量配置 `AI_API_KEY`、`AI_MODEL`（默认 `ep-m-20260607002345-lbn6s`）后，所有 AI 功能统一走后端网关；单机静态版仍可在设置中配置 Key 直连。
+多人版（推荐形态）不需要用户配置 Key：在 `server/.env.local` 配置 `AI_API_KEY`、`AI_MODEL`（默认 `ep-m-20260607002345-lbn6s`）后，所有 AI 功能统一走后端网关，浏览器不保存任何 Key，设置页只显示“云端 AI 网关”状态。单机静态版（直接打开 `index.html`）才需要在设置中配置个人 Key，且 Key 仅保存在本地浏览器。该组合已经用真实接口验证过：模拟面试 AI 点评、AI 连续追问、简历 AI 改写、智能解题、Agent 规划全部通过。
 
 ## 校招信息数据源
 

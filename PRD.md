@@ -407,7 +407,7 @@ AI 简历优化（本地评分 / AI 改写 / AI 深度匹配 / 图片识别）
 
 ### 7.3 安全与隐私
 
-- API Key 仅存浏览器 localStorage，不写入代码与仓库。
+- 多人版 API Key 仅存服务端 `server/.env.local`（不入库），浏览器不保存 Key；单机静态版个人 Key 仅存浏览器 localStorage。
 - 用户密码 scrypt 加盐哈希；数据目录不入库（.gitignore）。
 - 访客 AI 每日限额；登录接口限流。
 - 生产环境必须 HTTPS。

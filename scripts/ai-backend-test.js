@@ -25,6 +25,14 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   await page.waitForSelector('.hero-band h2');
   ok('backend ai pill', (await page.textContent('#aiPillText')).includes('云端 AI'));
 
+  await step('backend settings no user key', async () => {
+    await page.click('[data-action="open-settings"]');
+    const s = await page.textContent('#modalRoot');
+    ok('backend settings shows cloud gateway', s.includes('云端 AI 网关'));
+    ok('backend settings hides personal key', await page.locator('#setKey').count() === 0 && await page.locator('#setPreset').count() === 0);
+    await page.click('[data-action="close-modal"]');
+  });
+
   const username = 'ai_' + Date.now().toString(36);
   await step('register and run backend agent', async () => {
     await page.click('[data-action="open-account"]');

@@ -2020,28 +2020,26 @@
   // ---------- Settings ----------
   function settingsModal() {
     const p = S.profile;
+    const backend = !!window.OFFERFLOW_BACKEND;
+    const aiBlock = backend
+      ? '<div class="form-item full" style="flex-direction:row;align-items:center;gap:10px;border:1px solid var(--line-2);border-radius:var(--radius-sm);padding:10px">' + Icon("server") + '<div><div style="font-weight:600">云端 AI 网关</div><div class="hint" style="margin-top:2px">多人版由服务端统一调用豆包，无需在浏览器配置 API Key；服务端配置与用量可在 /api/system/status 查看。</div></div></div>'
+      : '<div class="form-item full" style="flex-direction:row;align-items:center;gap:10px;border:1px solid var(--line-2);border-radius:var(--radius-sm);padding:10px">' +
+        '<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="setAi" ' + (p.aiEnabled ? "checked" : "") + ' style="accent-color:var(--brand)"> 启用 AI 接口（可选）</label>' +
+        '<span class="hint" style="margin-left:auto">未启用时使用内置本地引擎</span></div>' +
+        '<div class="form-item full"><label>快捷预设</label><select id="setPreset"><option value="">选择预设</option><option value="doubao">豆包 Seed 2.0 mini（火山方舟）</option><option value="openai">OpenAI</option></select></div>' +
+        '<div class="form-item"><label>API Base URL</label><input id="setBase" value="' + esc(p.apiBase) + '" placeholder="https://api.openai.com/v1"></div>' +
+        '<div class="form-item"><label>模型</label><input id="setModel" value="' + esc(p.model) + '" placeholder="gpt-4o-mini"></div>' +
+        '<div class="form-item full"><label>API Key</label><input id="setKey" type="password" value="' + esc(p.apiKey) + '" placeholder="sk-..."></div>';
+    const aiNote = backend ? "" : '<div class="note" style="margin-top:14px">' + Icon("lock") + '<span>单机模式专用：API Key 仅保存在本地浏览器，用于调用 OpenAI 兼容接口；多人版请使用后端服务，无需配置 Key。</span></div>';
     showModal(`
       <div class="modal-head"><h3>设置</h3><button class="icon-btn" data-action="close-modal">${Icon("x")}</button></div>
       <div class="modal-body">
         <div class="form-grid">
           <div class="form-item"><label>姓名</label><input id="setName" value="${esc(p.name)}"></div>
           <div class="form-item"><label>目标岗位</label><input id="setRole" value="${esc(p.role)}"></div>
-          <div class="form-item full" style="flex-direction:row;align-items:center;gap:10px;border:1px solid var(--line-2);border-radius:var(--radius-sm);padding:10px">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="setAi" ${p.aiEnabled ? "checked" : ""} style="accent-color:var(--brand)"> 启用 AI 接口（可选）</label>
-            <span class="hint" style="margin-left:auto">未启用时使用内置本地引擎</span>
-          </div>
-          <div class="form-item full"><label>快捷预设</label>
-            <select id="setPreset">
-              <option value="">选择预设</option>
-              <option value="doubao">豆包 Seed 2.0 mini（火山方舟）</option>
-              <option value="openai">OpenAI</option>
-            </select>
-          </div>
-          <div class="form-item"><label>API Base URL</label><input id="setBase" value="${esc(p.apiBase)}" placeholder="https://api.openai.com/v1"></div>
-          <div class="form-item"><label>模型</label><input id="setModel" value="${esc(p.model)}" placeholder="gpt-4o-mini"></div>
-          <div class="form-item full"><label>API Key</label><input id="setKey" type="password" value="${esc(p.apiKey)}" placeholder="sk-..."></div>
+          ${aiBlock}
         </div>
-        <div class="note" style="margin-top:14px">${Icon("lock")}<span>API Key 仅保存在本地浏览器，用于调用 OpenAI 兼容接口增强面试点评与简历改写；不配置也不影响使用。</span></div>
+        ${aiNote}
         <div style="border-top:1px solid var(--line-2);margin-top:16px;padding-top:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
           <div><div style="font-weight:600">数据管理</div><div style="font-size:12px;color:var(--ink-3)">导出完整备份，或从备份文件恢复，支持合并与覆盖</div></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -2058,10 +2056,14 @@
   function saveSettings() {
     S.profile.name = ($("#setName") && $("#setName").value.trim()) || S.profile.name;
     S.profile.role = ($("#setRole") && $("#setRole").value.trim()) || "";
-    S.profile.aiEnabled = !!($("#setAi") && $("#setAi").checked);
-    S.profile.apiBase = ($("#setBase") && $("#setBase").value.trim()) || "";
-    S.profile.model = ($("#setModel") && $("#setModel").value.trim()) || "";
-    S.profile.apiKey = ($("#setKey") && $("#setKey").value.trim()) || "";
+    const ai = $("#setAi");
+    if (ai) S.profile.aiEnabled = ai.checked;
+    const base = $("#setBase");
+    if (base) S.profile.apiBase = base.value.trim() || "";
+    const model = $("#setModel");
+    if (model) S.profile.model = model.value.trim() || "";
+    const key = $("#setKey");
+    if (key) S.profile.apiKey = key.value.trim() || "";
     save();
     closeModal();
     render();

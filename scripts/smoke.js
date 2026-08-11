@@ -319,6 +319,7 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     await page.evaluate(() => localStorage.clear());
     await page.reload({ waitUntil: 'load' });
     await page.click('[data-action="open-settings"]');
+    ok('static settings single-mode note', (await page.textContent('#modalRoot')).includes('单机模式专用'));
     const downloadPromise = page.waitForEvent('download');
     await page.click('[data-action="export-backup"]');
     const download = await downloadPromise;
