@@ -261,6 +261,7 @@
   }
 
   function canUseAI() {
+    if (window.OFFERFLOW_BACKEND) return true;
     if (!S.profile.aiEnabled || !S.profile.apiKey) return false;
     if (window.Auth && Auth.user()) return true;
     const key = "offerflow:aiq:" + today();
@@ -335,7 +336,12 @@
     const av = $(".avatar");
     if (av) av.textContent = window.Auth && Auth.user() ? Auth.user().username.slice(0, 1).toUpperCase() : (S.profile.name || "林").slice(0, 1);
     const pill = $("#aiPillText");
-    if (pill) pill.textContent = window.Auth && Auth.token() ? "云同步已开启" : (S.profile.aiEnabled && S.profile.apiKey ? "AI 接口已启用" : "本地 AI 在线");
+    if (pill) {
+      let pt = window.Auth && Auth.token() ? "云同步已开启" : "";
+      if (window.OFFERFLOW_BACKEND) pt = pt ? pt + " · 云端 AI" : "云端 AI 已启用";
+      else if (S.profile.aiEnabled && S.profile.apiKey) pt = pt ? pt + " · AI 已启用" : "AI 接口已启用";
+      pill.textContent = pt || "本地 AI 在线";
+    }
     $("#sidebar").classList.remove("open");
   }
 
@@ -523,6 +529,7 @@
         <div class="grow"><h2>今天想完成什么？</h2><p>输入求职目标，Agent 会自主规划、调用工具并生成可执行的行动方案。</p></div>
         ${badge("Single Agent + Tools", "b-teal")}
       </div>
+      ${!window.OFFERFLOW_BACKEND && (!S.profile.aiEnabled || !S.profile.apiKey) ? '<div class="note" style="margin-bottom:14px">' + Icon("lightbulb") + "<span>当前为本地规则引擎（未配置 AI 接口）。配置 AI 接口或部署后端后，Agent 将由大模型驱动规划、工具调用与动态决策。</span></div>" : ""}
       <div class="card panel" style="margin-bottom:14px">
         <div class="form-grid">
           <div class="form-item full"><label>求职目标</label>
@@ -543,14 +550,19 @@
   }
 
   function agentResultHtml(r) {
-    const traceHtml = r.trace.map((t, i) => `
+    const traceHtml = r.trace.map((t, i) => {
+      const label = t.type === "llm" ? "LLM 决策 " + t.step : t.label;
+      const name = t.type === "llm" ? t.nextTool : t.name;
+      const detail = t.type === "llm" ? t.reasoning + " → " + t.detail : t.detail;
+      return `
       <details style="border-bottom:1px solid var(--line-2)">
         <summary style="cursor:pointer;padding:10px 12px;display:flex;gap:8px;align-items:center">
-          <span style="color:var(--green)">✓</span><b style="font-size:13px">${i + 1}. ${esc(t.label)}</b>
-          <span style="margin-left:auto;color:var(--ink-3);font-size:12px">${esc(t.name)}</span>
+          <span style="color:${t.type === "llm" ? "var(--brand-dark)" : "var(--green)"}">${t.type === "llm" ? "🧠" : "✓"}</span><b style="font-size:13px">${i + 1}. ${esc(label)}</b>
+          <span style="margin-left:auto;color:var(--ink-3);font-size:12px">${esc(name)}</span>
         </summary>
-        <div style="padding:0 12px 10px 34px;font-size:12.5px;color:var(--ink-2);line-height:1.6">${esc(t.detail)}</div>
-      </details>`).join("");
+        <div style="padding:0 12px 10px 34px;font-size:12.5px;color:var(--ink-2);line-height:1.6">${esc(detail)}</div>
+      </details>`;
+    }).join("");
     const planHtml = r.plan.map((p, i) => `<div class="list-row"><div class="grow"><h4>${esc(p)}</h4></div>${badge("Day " + (i + 1), "b-gray")}</div>`).join("");
     const qHtml = r.ids.map(id => {
       const q = D.questions.find(x => x.id === id);
@@ -560,8 +572,10 @@
     }).join("");
     return `
       <div class="card panel" style="margin-bottom:14px">
-        <div class="panel-head"><div><h2>Agent 执行轨迹</h2><div class="sub">展示每一步调用的工具与中间结果</div></div>${badge(r.ms + "ms 本地执行", "b-gray")}</div>
+        <div class="panel-head"><div><h2>Agent 执行轨迹</h2><div class="sub">${r.mode === "ai" ? "LLM 决策 + 工具执行 + 中间结果回喂" : "本地规则引擎（降级模式）"}</div></div>
+          ${badge(r.mode === "ai" ? "AI 驱动 · " + (r.steps ? r.steps.length : 0) + " 步决策" : "本地降级", r.mode === "ai" ? "b-teal" : "b-gray")}</div>
         ${traceHtml}
+        ${r.narrative ? '<div class="answer-block" style="margin-top:10px;border-left:3px solid var(--brand)"><h4>Agent 最终结论</h4><div style="line-height:1.7">' + nl(r.narrative) + "</div></div>" : ""}
       </div>
       <div class="grid grid-2" style="margin-bottom:14px">
         <div class="card panel">
@@ -605,15 +619,21 @@
       <div id="agentAiInsight" style="margin-bottom:14px"></div>`;
   }
 
-  function runAgentAction() {
+  async function runAgentAction() {
     const goal = ($("#agentGoal") && $("#agentGoal").value.trim()) || agentInput;
     if (!goal) { toast("请输入求职目标"); return; }
     agentInput = goal;
     const jd = ($("#agentJdText") && $("#agentJdText").value) || "";
     const resumeText = S.resumes && S.resumes[0] ? S.resumes[0].text : "";
-    agentResult = window.Agent.runGoal(goal, { jd, resumeText, state: S });
+    agentResult = null;
     render();
-    if (canUseAI()) {
+    const box = $("#agentResultWrap");
+    if (box) box.innerHTML = '<div class="card empty">' + Icon("bot") + "<h3>Agent 正在执行…</h3><p>LLM 规划 → 调用工具 → 读取中间结果 → 动态决策</p></div>";
+    const t0 = Date.now();
+    agentResult = await window.Agent.runGoal(goal, { jd, resumeText, state: S, profile: S.profile });
+    agentResult.ms = Date.now() - t0;
+    render();
+    if (agentResult.mode === "local" && canUseAI()) {
       const prompt = [
         { role: "system", content: "你是 OfferFlow 求职 Agent 的决策层。基于本地工具结果，用 120 字以内补充最有价值的一条判断与一个可执行建议，不要重复已有信息。" },
         { role: "user", content: "目标：" + goal + "\n工具摘要：" + JSON.stringify({ matchScore: agentResult.matchScore, gaps: agentResult.gaps, plan: agentResult.plan.slice(0, 3), tasks: agentResult.tasks.map(t => t.title) }) }
@@ -2043,10 +2063,7 @@
     S.profile.apiKey = ($("#setKey") && $("#setKey").value.trim()) || "";
     save();
     closeModal();
-    const av = $(".avatar");
-    if (av) av.textContent = (S.profile.name || "林").slice(0, 1);
-    const pill = $("#aiPillText");
-    if (pill) pill.textContent = S.profile.aiEnabled && S.profile.apiKey ? "AI 接口已启用" : "本地 AI 在线";
+    render();
     toast("设置已保存");
   }
 
@@ -2122,14 +2139,14 @@
             save();
             render();
           }).catch(() => {
-            lastSolve = local;
+            lastSolve = { matched: local.matched, title: local.matched ? local.title + "（AI 失败回退）" : "本地解析（AI 失败回退）", type, approach: local.approach, code: local.code, complexity: local.complexity, hint: local.hint, tags: local.tags };
             S.solved.unshift({ title: local.title, text: text.slice(0, 120), matched: local.matched, time: nowStr() });
             S.solved = S.solved.slice(0, 20);
             save();
             render();
           });
         } else {
-          lastSolve = local;
+          lastSolve = { matched: local.matched, title: local.matched ? local.title + "（本地解析）" : "本地解析", type, approach: local.approach, code: local.code, complexity: local.complexity, hint: local.hint, tags: local.tags };
           S.solved.unshift({ title: local.title, text: text.slice(0, 120), matched: local.matched, time: nowStr() });
           S.solved = S.solved.slice(0, 20);
           save();

@@ -5,7 +5,8 @@
 ## 功能模块
 
 - 工作台：准备指数、可编辑今日任务、能力雷达与薄弱点推荐、产品方向每日一题（每日 00:00 自动换题）、面试日历与倒计时、本周学习报告、投递管道、最近复盘、校招速览独立整行展示
-- AI 求职 Agent（V2）：目标驱动入口，输入求职目标后自动拆解任务、调用工具（岗位搜索/JD 分析/简历匹配/能力诊断/题目推荐/计划生成/任务创建），展示完整执行轨迹；低风险自动执行，创建任务、修改投递等高风险操作需用户确认
+- AI 求职 Agent（V2）：目标驱动入口，由大模型逐轮决策调用真实工具（岗位检索/JD 分析/简历分析/简历匹配/能力诊断/复盘记忆/题目推荐/计划生成/任务建议），每步读取工具中间结果后再决定下一步，最终生成匹配分、缺口、训练计划与报告；未配置 AI 时明确降级为本地规则引擎
+- 后端 AI 网关：多人版所有 AI 调用统一走后端 `/api/ai/*`（服务端配置 `AI_API_KEY`），前端不再依赖个人 Key；系统状态接口 `/api/system/status` 可查看 AI/数据源配置与用户数
 - Agent 复盘诊断：分析最近多场复盘中的重复问题，识别持续性能力缺口并推荐训练题目、生成专项任务
 - Agent 简历优化：分析 → 改写 → 再评估，给出优化前后匹配分与可直接应用的改写简历
 - AI 模拟面试：方向/难度/场景/语言配置，题量 1-20 自定义，提交后展示参考答案与要点，支持语音输入回答，可选 AI 连续追问（每题最多 1-3 轮），自动生成复盘报告
@@ -89,6 +90,8 @@ API Base URL: https://ark.cn-beijing.volces.com/api/v3
 
 只需再粘贴 API Key 并启用即可。该组合已经用真实接口验证过：模拟面试 AI 点评、AI 连续追问、简历 AI 改写全部通过，浏览器直连无跨域问题。Key 只保存在浏览器 localStorage，不会写入代码。
 
+多人版（推荐 SaaS 形态）不需要用户配置 Key：在服务器环境变量配置 `AI_API_KEY`、`AI_MODEL`（默认 `ep-m-20260607002345-lbn6s`）后，所有 AI 功能统一走后端网关；单机静态版仍可在设置中配置 Key 直连。
+
 ## 校招信息数据源
 
 后端支持从任意 JSON 数据源每日自动抓取校招信息（默认每 12 小时检查一次）。数据源格式见 `server/feed.example.json`，字段：`type`（campus/intern/state）、`company`、`batch`、`date`、`roles`、`cities`、`link`、`note`。
@@ -130,6 +133,12 @@ Agent 评测（12 个标准求职任务，评估任务成功率、工具调用�
 node scripts/agent-eval.js
 ```
 
+后端 AI 网关 + 真 Agent 实测（需服务端已配置 `AI_API_KEY`）：
+
+```bash
+node scripts/ai-backend-test.js
+```
+
 ## 文件结构
 
 ```text
@@ -152,6 +161,7 @@ scripts/multi-user-test.js   多账号注册、数据隔离与云同步测试
 scripts/ai-realtime-test.js   真实豆包 AI 全链路测试
 scripts/agent-eval-data.js   Agent 标准任务评测集（12 例）
 scripts/agent-eval.js        Agent 评估脚本（任务成功率/工具准确率/规划准确率）
+scripts/ai-backend-test.js   后端 AI 网关与真 Agent 实测
 server/server.js   多人版 Node 后端（静态资源 + 注册登录 + 状态同步 + 校招数据源）
 server/feed.example.json   校招数据源格式示例
 deploy/            部署配套（Docker/systemd/Nginx/Caddy/备份）

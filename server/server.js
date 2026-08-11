@@ -11,6 +11,10 @@ const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
 const RESOURCES_FILE = path.join(DATA_DIR, 'resources.json');
 const MAX_BODY = 6 * 1024 * 1024;
 
+const AI_API_KEY = process.env.AI_API_KEY || process.env.ARK_API_KEY || '';
+const AI_BASE_URL = (process.env.AI_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3').replace(/\/+$/, '');
+const AI_MODEL = process.env.AI_MODEL || 'ep-m-20260607002345-lbn6s';
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -90,6 +94,19 @@ function sanitizeResourceItem(raw) {
     link: String(raw.link || '').trim(),
     note: String(raw.note || '').trim()
   };
+}
+
+async function callAIProxy(messages, maxTokens) {
+  if (!AI_API_KEY) return { error: '服务端未配置 AI Key（AI_API_KEY）' };
+  const res = await fetch(AI_BASE_URL + '/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AI_API_KEY },
+    body: JSON.stringify({ model: AI_MODEL, messages, temperature: 0.6, max_tokens: maxTokens || 900 }),
+    signal: AbortSignal.timeout(60000)
+  });
+  if (!res.ok) throw new Error('upstream ' + res.status);
+  const data = await res.json();
+  return { content: data.choices && data.choices[0] ? data.choices[0].message.content : null };
 }
 
 async function refreshResources(feedUrl) {
@@ -184,7 +201,7 @@ function serveStatic(req, res, pathname) {
     const ext = path.extname(filePath).toLowerCase();
     res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
     if (filePath === path.join(ROOT, 'index.html')) {
-      content = content.toString('utf8').replace('</body>', '<script>window.OFFERFLOW_BACKEND=true</script></body>');
+      content = content.toString('utf8').replace('</head>', '<script>window.OFFERFLOW_BACKEND=true</script></head>');
     }
     res.end(content);
   });
@@ -204,6 +221,44 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname.startsWith('/api/')) {
     try {
+      if (pathname === '/api/system/status' && req.method === 'GET') {
+        return sendJson(res, 200, {
+          version: '2.0',
+          aiConfigured: !!AI_API_KEY,
+          aiModel: AI_MODEL,
+          feedConfigured: !!FEED_URL,
+          resourcesUpdatedAt: resources.updatedAt,
+          resourcesCount: resources.items.length,
+          userCount: users.users.length
+        });
+      }
+      if (pathname === '/api/ai/chat' && req.method === 'POST') {
+        if (rateLimited(req.socket.remoteAddress)) return sendJson(res, 429, { error: '请求过于频繁，请稍后再试' });
+        const body = await readBody(req);
+        if (!Array.isArray(body.messages) || !body.messages.length) return sendJson(res, 400, { error: 'messages 不能为空' });
+        try {
+          const r = await callAIProxy(body.messages, body.max_tokens);
+          if (r.error) return sendJson(res, 503, { error: r.error });
+          return sendJson(res, 200, { content: r.content });
+        } catch (e) {
+          return sendJson(res, 502, { error: 'AI 上游调用失败：' + e.message });
+        }
+      }
+      if (pathname === '/api/ai/vision' && req.method === 'POST') {
+        if (rateLimited(req.socket.remoteAddress)) return sendJson(res, 429, { error: '请求过于频繁，请稍后再试' });
+        const body = await readBody(req);
+        if (!body.image) return sendJson(res, 400, { error: '缺少图片' });
+        try {
+          const r = await callAIProxy([
+            { role: 'system', content: '你是简历 OCR 助手。请把图片中的文字完整、按原结构提取出来，保留换行；不要翻译、不要总结、不要添加评论。' },
+            { role: 'user', content: [{ type: 'text', text: '提取这张简历图片中的全部文字：' }, { type: 'image_url', image_url: { url: body.image } }] }
+          ], 2000);
+          if (r.error) return sendJson(res, 503, { error: r.error });
+          return sendJson(res, 200, { content: r.content });
+        } catch (e) {
+          return sendJson(res, 502, { error: 'AI 上游调用失败：' + e.message });
+        }
+      }
       if (pathname === '/api/resources' && req.method === 'GET') {
         return sendJson(res, 200, { items: resources.items, updatedAt: resources.updatedAt });
       }
@@ -218,6 +273,24 @@ const server = http.createServer(async (req, res) => {
         } catch (e) {
           return sendJson(res, 502, { error: '数据源抓取失败：' + e.message });
         }
+      }
+      if (pathname === '/api/resources/import' && req.method === 'POST') {
+        const user = authUser(req);
+        if (!user) return sendJson(res, 401, { error: '请先登录' });
+        const body = await readBody(req);
+        const incoming = Array.isArray(body.items) ? body.items : [];
+        let added = 0;
+        incoming.forEach(raw => {
+          const item = sanitizeResourceItem(raw);
+          if (!item.company) return;
+          const dup = resources.items.some(x => x.type === item.type && x.company === item.company && x.batch === item.batch);
+          if (dup) return;
+          resources.items.push(item);
+          added++;
+        });
+        if (incoming.length) resources.updatedAt = new Date().toISOString();
+        saveResources();
+        return sendJson(res, 200, { ok: true, added, total: resources.items.length });
       }
       if (pathname === '/api/register' && req.method === 'POST') {
         if (rateLimited(req.socket.remoteAddress)) return sendJson(res, 429, { error: '请求过于频繁，请稍后再试' });

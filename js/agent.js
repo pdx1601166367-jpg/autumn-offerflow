@@ -48,11 +48,9 @@
     })).sort((a, b) => a.score - b.score);
   }
 
-  function jobSearch(goal, state) {
-    const found = [];
-    (D.resources.campus || []).forEach(r => {
-      if (goal.company && (r.company.includes(goal.company) || goal.company.includes(r.company))) found.push(r);
-    });
+  function localJobSearch(goal, state, remoteItems) {
+    const pool = remoteItems && remoteItems.length ? remoteItems : (D.resources.campus || []);
+    const found = pool.filter(r => goal.company && (r.company.includes(goal.company) || goal.company.includes(r.company)));
     return found.length ? found : [{ company: goal.company || "目标企业", batch: "目标岗位", roles: goal.role, cities: "待确认", link: "", note: "未在内置资料中找到，可手动粘贴 JD" }];
   }
 
@@ -60,8 +58,7 @@
     if (opts.jd && opts.jd.trim()) {
       const words = opts.jd.match(/[\u4e00-\u9fa5A-Za-z0-9+#.]{2,}/g) || [];
       const stop = new Set(["以及", "负责", "我们", "要求", "岗位", "工作", "职责", "能力", "相关", "熟悉", "优先", "具备", "经验", "参与", "良好", "了解", "掌握"]);
-      const kws = [...new Set(words.filter(w => !stop.has(w)))].slice(0, 10);
-      return { source: "用户粘贴 JD", keywords: kws };
+      return { source: "用户粘贴 JD", keywords: [...new Set(words.filter(w => !stop.has(w)))].slice(0, 10) };
     }
     return { source: "岗位默认能力模型", keywords: ROLE_DEFAULTS[goal.role] || ROLE_DEFAULTS["AI 产品经理"] };
   }
@@ -124,65 +121,225 @@
     return tasks.slice(0, 5);
   }
 
-  function runGoal(goalText, opts) {
-    opts = opts || {};
+  function buildMemory(state, opts, goal) {
+    const resumeText = opts.resumeText !== undefined ? opts.resumeText : readLatestResume(state);
+    const cap = capability(state);
+    return {
+      profile: { name: (state.profile && state.profile.name) || "未设置", role: (state.profile && state.profile.role) || "未设置" },
+      goal,
+      resumeText: resumeText.slice(0, 1200),
+      jdText: opts.jd ? opts.jd.slice(0, 1500) : "",
+      practice: cap.stats,
+      reviews: (state.reviews || []).slice(0, 3).map(r => ({ score: r.score, improves: r.improves })),
+      mastered: (state.mastered || []).length,
+      favorites: (state.favorites || []).length,
+      applications: (state.apps || []).map(a => ({ company: a.company, status: a.status, interviewAt: a.interviewAt || "" })),
+      tasks: (state.tasks || []).map(t => t.title)
+    };
+  }
+
+  function parseAgentResponse(raw) {
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (e) {}
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (m) {
+      try { return JSON.parse(m[0]); } catch (e) {}
+    }
+    return null;
+  }
+
+  async function fetchRemoteJobs() {
+    if (!window.OFFERFLOW_BACKEND) return null;
+    try {
+      const r = await fetch("/api/resources", { cache: "no-store" });
+      if (!r.ok) return null;
+      const d = await r.json();
+      return d.items || null;
+    } catch (e) { return null; }
+  }
+
+  const TOOL_DOCS = [
+    { name: "search_job", desc: "检索目标企业岗位信息", params: { company: "企业名", role: "岗位名" } },
+    { name: "analyze_jd", desc: "分析岗位 JD 提取能力要求", params: { jd: "JD 文本" } },
+    { name: "analyze_resume", desc: "分析用户简历质量", params: {} },
+    { name: "match_resume", desc: "计算简历与 JD 匹配度", params: {} },
+    { name: "analyze_capability", desc: "读取练习记录分析能力缺口", params: {} },
+    { name: "review_memory", desc: "读取历史复盘识别重复问题", params: {} },
+    { name: "recommend_questions", desc: "根据缺口推荐训练题目", params: { count: 5 } },
+    { name: "generate_plan", desc: "生成 N 天准备计划", params: { days: 7 } },
+    { name: "propose_tasks", desc: "生成待用户确认的行动任务", params: {} }
+  ];
+
+  const SYSTEM_PROMPT = "你是 OfferFlow 求职 Agent。用户提出求职目标后，你必须自主规划并逐步调用工具。规则：\n" +
+    "1. 每步只输出 JSON：{\"reasoning\":\"为什么做这步\",\"next_tool\":\"工具名\",\"params\":{}}；全部完成时输出 {\"reasoning\":\"...\",\"done\":true,\"result\":{\"matchScore\":0-100,\"strengths\":[],\"gaps\":[],\"plan\":[],\"tasks\":[],\"narrative\":\"最终结论\"}}。\n" +
+    "2. 必须先调用 analyze_jd 或 search_job 获取岗位要求，再调用 analyze_resume / match_resume，再 analyze_capability / review_memory，最后 recommend_questions / generate_plan / propose_tasks。\n" +
+    "3. 只能基于工具返回的真实数据做判断，不得编造用户练习记录、简历内容或岗位数据；数据缺失时在 gaps 或 narrative 中说明。\n" +
+    "4. 创建任务、保存岗位属于高风险操作，只在 result.tasks 中给出建议，由用户确认。\n" +
+    "5. 不要重复调用同一个工具且参数相同；如果 search_job 返回的岗位没有 JD，立即用 analyze_jd 基于用户提供的 JD 或岗位默认能力模型继续。\n" +
+    "6. 你最多执行 5 个工具调用；最后一次输出必须带 done:true 并给出完整 result（matchScore/strengths/gaps/plan/tasks/narrative）。\n" +
+    "可用工具：" + JSON.stringify(TOOL_DOCS);
+
+  async function toolRouter(name, params, ctx) {
+    switch (name) {
+      case "search_job": {
+        const remote = await fetchRemoteJobs();
+        const jobs = localJobSearch(ctx.goal, ctx.state, remote);
+        ctx.jobs = jobs;
+        return { summary: "检索到 " + jobs.length + " 条相关岗位：" + jobs[0].company + " · " + jobs[0].batch + (jobs[0].link ? "" : "（无 JD，下一步请调用 analyze_jd）"), data: jobs.slice(0, 5) };
+      }
+      case "analyze_jd": {
+        ctx.jd = jdAnalysis(ctx.goal, ctx.opts);
+        return { summary: "JD 关键要求：" + ctx.jd.keywords.slice(0, 6).join("、"), data: ctx.jd };
+      }
+      case "analyze_resume": {
+        const text = ctx.opts.resumeText !== undefined ? ctx.opts.resumeText : readLatestResume(ctx.state);
+        ctx.resume = E.scoreResume(text, ctx.opts.jd || "");
+        ctx.resumeText = text;
+        return { summary: "简历评分 " + ctx.resume.score + (text.trim() ? "" : "（未检测到简历）"), data: { score: ctx.resume.score, dims: ctx.resume.dims } };
+      }
+      case "match_resume": {
+        const text = ctx.resumeText !== undefined ? ctx.resumeText : (ctx.opts.resumeText !== undefined ? ctx.opts.resumeText : readLatestResume(ctx.state));
+        ctx.resume = E.scoreResume(text, ctx.opts.jd || "");
+        ctx.matchScore = ctx.resume.score;
+        return { summary: "匹配分 " + ctx.resume.score, data: { score: ctx.resume.score, dims: ctx.resume.dims, suggestions: ctx.resume.suggestions.slice(0, 3) } };
+      }
+      case "analyze_capability": {
+        ctx.cap = capability(ctx.state);
+        return { summary: ctx.cap.stats.map(s => s.cat + " " + s.score).join(" / ") || "暂无练习数据", data: ctx.cap };
+      }
+      case "review_memory": {
+        ctx.mem = reviewMemory(ctx.state);
+        return { summary: ctx.mem.recent ? "最近 " + ctx.mem.recent + " 场，重复问题 " + ctx.mem.top.length + " 个" : "暂无复盘", data: ctx.mem };
+      }
+      case "recommend_questions": {
+        ctx.ids = recommend(ctx.state, ctx.cap ? ctx.cap.weak : null, Number(params.count) || 5);
+        return { summary: "推荐 " + ctx.ids.length + " 题", data: ctx.ids };
+      }
+      case "generate_plan": {
+        ctx.plan = planFor(ctx.goal, ctx.cap || capability(ctx.state), ctx.jd ? ctx.jd.keywords : [], ctx.goal.company);
+        return { summary: "生成 " + ctx.plan.length + " 天计划", data: ctx.plan };
+      }
+      case "propose_tasks": {
+        ctx.tasks = tasksFrom(ctx.goal, ctx.plan || planFor(ctx.goal, ctx.cap || capability(ctx.state), ctx.jd ? ctx.jd.keywords : [], ctx.goal.company), ctx.cap || capability(ctx.state));
+        return { summary: "建议 " + ctx.tasks.length + " 个任务（待用户确认）", data: ctx.tasks };
+      }
+      default:
+        return { summary: "未知工具：" + name, data: null };
+    }
+  }
+
+  async function runAgentic(goalText, opts, profile) {
+    const state = opts.state || readState();
+    const goal = parseGoal(goalText);
+    const ctx = { state, goal, opts, jobs: [], jd: null, resume: null, resumeText: "", cap: null, mem: null, ids: [], plan: [], tasks: [], matchScore: 0 };
+    const trace = [];
+    const steps = [];
+    const memory = buildMemory(state, opts, goal);
+    const messages = [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: "用户目标：" + goalText + "\n用户上下文：" + JSON.stringify(memory) }
+    ];
+    const MAX_STEPS = 5;
+    let final = null;
+    for (let i = 0; i < MAX_STEPS; i++) {
+      const raw = await E.callAI(messages, profile);
+      if (!raw) break;
+      const parsed = parseAgentResponse(raw);
+      if (!parsed) {
+        messages.push({ role: "assistant", content: raw });
+        messages.push({ role: "user", content: "输出格式错误，请严格输出 JSON。" });
+        continue;
+      }
+      if (parsed.done) { final = parsed; break; }
+      if (!parsed.next_tool) {
+        messages.push({ role: "assistant", content: raw });
+        messages.push({ role: "user", content: "缺少 next_tool，请选择可用工具。" });
+        continue;
+      }
+      let toolResult;
+      try {
+        toolResult = await toolRouter(parsed.next_tool, parsed.params || {}, ctx);
+      } catch (e) {
+        toolResult = { summary: "工具执行失败：" + e.message, data: null };
+      }
+      trace.push({ type: "llm", step: i + 1, reasoning: parsed.reasoning || "", nextTool: parsed.next_tool, detail: toolResult.summary });
+      steps.push({ reasoning: parsed.reasoning || "", tool: parsed.next_tool, summary: toolResult.summary });
+      messages.push({ role: "assistant", content: JSON.stringify({ next_tool: parsed.next_tool, reasoning: parsed.reasoning || "" }) });
+      messages.push({ role: "user", content: "Tool " + parsed.next_tool + " 返回：" + JSON.stringify(toolResult.data).slice(0, 2500) });
+    }
+    if (!steps.length) {
+      return null;
+    }
+    const r = final && final.result ? final.result : {};
+    const cap = ctx.cap || capability(state);
+    const plan = Array.isArray(r.plan) && r.plan.length ? r.plan : ctx.plan;
+    const tasks = Array.isArray(r.tasks) && r.tasks.length ? r.tasks.map(t => typeof t === "string" ? { title: t, note: "Agent 生成" } : t) : ctx.tasks;
+    const ids = Array.isArray(r.questionIds) && r.questionIds.length ? r.questionIds : ctx.ids;
+    const matchScore = typeof r.matchScore === "number" ? r.matchScore : (ctx.resume ? ctx.resume.score : 60);
+    const strengths = Array.isArray(r.strengths) && r.strengths.length ? r.strengths : [];
+    const gaps = Array.isArray(r.gaps) && r.gaps.length ? r.gaps : cap.weak.slice(0, 3).map(c => {
+      const s = cap.stats.find(x => x.cat === c) || { cat: c, score: 60 };
+      return c + " 平均分 " + s.score;
+    });
+    return {
+      goal, jobs: ctx.jobs.length ? ctx.jobs : localJobSearch(goal, state), jd: ctx.jd || jdAnalysis(goal, opts),
+      resume: ctx.resume, matchScore, cap, mem: ctx.mem || reviewMemory(state), ids, plan, tasks, strengths, gaps,
+      trace, steps, ms: 0, mode: "ai", deterministic: false, company: goal.company, role: goal.role,
+      narrative: r.narrative || ""
+    };
+  }
+
+  function runLocal(goalText, opts) {
     const t0 = Date.now();
     const state = opts.state || readState();
     const goal = parseGoal(goalText);
     const trace = [];
-    const tool = (name, label, detail) => trace.push({ name, label, detail });
-
-    tool("Goal Understanding", "理解求职目标", goal.company + " · " + goal.role + " · " + goal.intent + " · " + goal.days + " 天");
-
-    const jobs = jobSearch(goal, state);
-    tool("Job Search", "搜索目标岗位", jobs[0].company + " · " + jobs[0].batch + (jobs[0].link ? " · " + jobs[0].link : ""));
-
+    const tool = (name, label, detail) => trace.push({ type: "tool", name, label, detail });
+    tool("search_job", "搜索目标岗位", goal.company + " · " + goal.role);
+    const jobs = localJobSearch(goal, state);
+    tool("analyze_jd", "分析岗位要求", "默认能力模型");
     const jd = jdAnalysis(goal, opts);
-    tool("JD Analysis", "分析岗位要求", jd.keywords.slice(0, 6).join("、"));
-
     const resumeText = opts.resumeText !== undefined ? opts.resumeText : readLatestResume(state);
     const resume = E.scoreResume(resumeText, opts.jd || "");
-    tool("Resume Analysis", "分析个人简历", resumeText.trim() ? "简历评分 " + resume.score : "未检测到简历，建议先粘贴简历");
-
-    tool("Resume Match", "匹配岗位要求", "匹配分 " + resume.score + " · 最弱维度 " + Object.entries(resume.dims).sort((a, b) => a[1] - b[1])[0][0] + " " + Object.entries(resume.dims).sort((a, b) => a[1] - b[1])[0][1]);
-
+    tool("analyze_resume", "分析个人简历", resumeText.trim() ? "简历评分 " + resume.score : "未检测到简历");
+    tool("match_resume", "匹配岗位要求", "匹配分 " + resume.score);
     const cap = capability(state);
-    tool("Capability Analysis", "检查能力数据", cap.stats.length ? cap.stats.map(s => s.cat + " " + s.score).join(" / ") : "暂无练习数据，以岗位能力模型兜底");
-
+    tool("analyze_capability", "检查能力数据", cap.stats.map(s => s.cat + " " + s.score).join(" / "));
     const mem = reviewMemory(state);
-    tool("Review Memory", "读取历史复盘", mem.recent ? "最近 " + mem.recent + " 场，重复问题：" + (mem.top.map(t => t.gap.slice(0, 14) + "×" + t.times).join("、") || "无") : "暂无复盘记录");
-
+    tool("review_memory", "读取历史复盘", mem.recent ? "最近 " + mem.recent + " 场" : "暂无复盘");
     const ids = recommend(state, cap.weak, 5);
-    tool("Question Recommend", "推荐训练题目", "命中 " + (cap.weak.length ? cap.weak[0] : "AI 产品") + " 方向，推荐 " + ids.length + " 题");
-
+    tool("recommend_questions", "推荐训练题目", "推荐 " + ids.length + " 题");
     const plan = planFor(goal, cap, jd.keywords, goal.company);
-    tool("Training Plan", "生成准备计划", plan.length + " 天计划（Day 1: " + plan[0].replace(/^Day \d+：/, "") + "）");
-
+    tool("generate_plan", "生成准备计划", plan.length + " 天");
     const tasks = tasksFrom(goal, plan, cap);
-    tool("Task Creation", "生成行动任务", "建议创建 " + tasks.length + " 个任务，等待用户确认");
-
-    const strengths = [];
-    if (resumeText.trim()) strengths.push("简历已就绪，可进入匹配优化");
-    if (cap.avg !== null && cap.avg >= 70) strengths.push("近期练习平均分 " + cap.avg + "，基础扎实");
-    if (mem.recent > 0 && mem.top.length === 0) strengths.push("复盘无重复性问题，表现稳定");
-    if (!strengths.length) strengths.push("已具备完整求职工具链，Agent 已启动");
-    const gaps = cap.weak.slice(0, 3).map(c => {
-      const s = cap.stats.find(x => x.cat === c) || { cat: c, score: 60 };
-      return c + " 平均分 " + s.score;
-    });
-
+    tool("propose_tasks", "生成行动任务", "建议 " + tasks.length + " 个任务（待用户确认）");
     return {
       goal, jobs, jd, resume, matchScore: resume.score, cap, mem, ids, plan, tasks,
-      strengths, gaps, trace, ms: Date.now() - t0, deterministic: true, company: goal.company, role: goal.role
+      strengths: resumeText.trim() ? ["简历已就绪"] : [], gaps: cap.weak.map(c => c + " 平均分 " + (cap.stats.find(x => x.cat === c) || { score: 60 }).score),
+      trace, steps: [], ms: Date.now() - t0, mode: "local", deterministic: true, company: goal.company, role: goal.role, narrative: ""
     };
+  }
+
+  async function runGoal(goalText, opts) {
+    opts = opts || {};
+    const profile = opts.profile || readState().profile || {};
+    const useAI = window.OFFERFLOW_BACKEND || (profile.aiEnabled && profile.apiKey);
+    if (useAI) {
+      try {
+        const r = await runAgentic(goalText, opts, profile);
+        if (r && r.steps.length) return r;
+      } catch (e) {}
+    }
+    return runLocal(goalText, opts);
   }
 
   window.Agent = {
     runGoal,
+    runLocal,
     parseGoal,
     practiceStats,
     recommend,
     readState,
-    TOOLS: ["Goal Understanding", "Job Search", "JD Analysis", "Resume Analysis", "Resume Match", "Capability Analysis", "Review Memory", "Question Recommend", "Training Plan", "Task Creation"]
+    TOOLS: TOOL_DOCS.map(t => t.name)
   };
 })();

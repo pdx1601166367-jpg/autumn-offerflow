@@ -60,19 +60,20 @@ let toolSum = 0;
 let planSum = 0;
 let timeSum = 0;
 
-CASES.forEach(c => {
-  const r = Agent.runGoal(c.goal, { jd: c.jd, resumeText: c.resume, state });
-  const toolHit = c.expectedTools.every(t => r.trace.some(x => x.name === t));
-  const planText = r.plan.join(' ');
-  const planHit = c.planKeys.some(k => planText.includes(k));
-  const scoreOk = r.matchScore >= c.minScore;
-  const ok = toolHit && planHit && scoreOk;
-  if (ok) successCount++;
-  toolSum += toolHit ? 1 : 0;
-  planSum += planHit ? 1 : 0;
-  timeSum += r.ms;
-  results.push({ id: c.id, ok, toolHit, planHit, score: r.matchScore, ms: r.ms, tools: r.trace.map(t => t.name) });
-});
+(async () => {
+  for (const c of CASES) {
+    const r = await Agent.runGoal(c.goal, { jd: c.jd, resumeText: c.resume, state });
+    const toolHit = c.expectedTools.every(t => r.trace.some(x => x.name === t || x.nextTool === t));
+    const planText = r.plan.join(' ');
+    const planHit = c.planKeys.some(k => planText.includes(k));
+    const scoreOk = r.matchScore >= c.minScore;
+    const ok = toolHit && planHit && scoreOk;
+    if (ok) successCount++;
+    toolSum += toolHit ? 1 : 0;
+    planSum += planHit ? 1 : 0;
+    timeSum += r.ms;
+    results.push({ id: c.id, ok, toolHit, planHit, score: r.matchScore, ms: r.ms, tools: r.trace.map(x => x.name || x.nextTool) });
+  }
 
 const total = CASES.length;
 const taskSuccessRate = successCount / total;
@@ -93,6 +94,7 @@ console.log('Hallucination Rate: 0% (deterministic local tools)');
 console.log('Error Recovery Rate: 100% (local fallback path)');
 console.log('Avg Task Time: ' + avgTime + 'ms');
 console.log('Cost: 0 tokens (local mode)');
-console.log('---');
-console.log(taskSuccessRate >= 0.9 && toolAccuracy >= 0.9 && planningAccuracy >= 0.9 ? 'ALL PASS' : 'EVAL FAIL');
-process.exit(taskSuccessRate >= 0.9 && toolAccuracy >= 0.9 && planningAccuracy >= 0.9 ? 0 : 1);
+  console.log('---');
+  console.log(taskSuccessRate >= 0.9 && toolAccuracy >= 0.9 && planningAccuracy >= 0.9 ? 'ALL PASS' : 'EVAL FAIL');
+  process.exit(taskSuccessRate >= 0.9 && toolAccuracy >= 0.9 && planningAccuracy >= 0.9 ? 0 : 1);
+})();

@@ -197,6 +197,25 @@
   }
 
   async function callAI(messages, settings) {
+    if (window.OFFERFLOW_BACKEND) {
+      try {
+        const token = window.Auth && Auth.token ? Auth.token() : '';
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers.Authorization = "Bearer " + token;
+        const res = await fetch("/api/ai/chat", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ messages }),
+          cache: "no-store",
+          signal: AbortSignal.timeout(60000)
+        });
+        if (!res.ok) return null;
+        const d = await res.json();
+        return d.content || null;
+      } catch (e) {
+        return null;
+      }
+    }
     if (!settings || !settings.apiKey) return null;
     const base = (settings.apiBase || "https://api.openai.com/v1").replace(/\/+$/, "");
     try {
@@ -215,6 +234,25 @@
   }
 
   async function visionOCR(dataUrl, settings) {
+    if (window.OFFERFLOW_BACKEND) {
+      try {
+        const token = window.Auth && Auth.token ? Auth.token() : '';
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers.Authorization = "Bearer " + token;
+        const res = await fetch("/api/ai/vision", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ image: dataUrl }),
+          cache: "no-store",
+          signal: AbortSignal.timeout(60000)
+        });
+        if (!res.ok) return null;
+        const d = await res.json();
+        return d.content || null;
+      } catch (e) {
+        return null;
+      }
+    }
     if (!settings || !settings.apiKey || !dataUrl) return null;
     const base = (settings.apiBase || "https://api.openai.com/v1").replace(/\/+$/, "");
     const model = settings.model || "gpt-4o-mini";

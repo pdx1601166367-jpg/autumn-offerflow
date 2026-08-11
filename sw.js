@@ -1,4 +1,4 @@
-const CACHE = "offerflow-v2";
+const CACHE = "offerflow-v3";
 const ASSETS = [
   "./",
   "./index.html",

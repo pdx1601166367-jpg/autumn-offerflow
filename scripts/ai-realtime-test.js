@@ -99,6 +99,19 @@ const ARK_BASE = process.env.ARK_BASE || 'https://ark.cn-beijing.volces.com/api/
     ok('real ai resume match', t.includes('匹配分') || t.length > 120, t.slice(0, 60));
   });
 
+  await step('real ai agent planning', async () => {
+    await page.goto(BASE + '/#/agent', { waitUntil: 'load' });
+    await page.waitForTimeout(250);
+    await page.fill('#agentGoal', '帮我准备阿里 AI 产品经理面试，还有 10 天');
+    await page.click('[data-action="run-agent"]');
+    await page.waitForFunction(() => {
+      const el = document.querySelector('#agentResultWrap');
+      return el && el.textContent.includes('AI 驱动');
+    }, null, { timeout: 180000 });
+    const t = await page.textContent('#agentResultWrap');
+    ok('real ai agent llm planning', t.includes('LLM 决策') && t.includes('analyze_jd'));
+  });
+
   ok('no console errors', errors.length === 0);
   if (errors.length) console.log(errors.join('\n'));
   await context.close();
