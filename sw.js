@@ -1,4 +1,4 @@
-const CACHE = "offerflow-v4";
+const CACHE = "offerflow-v5";
 const ASSETS = [
   "./",
   "./index.html",
@@ -15,6 +15,8 @@ const ASSETS = [
   "./js/bank-detail-3.js",
   "./js/data.js",
   "./js/engine.js",
+  "./js/agent.js",
+  "./js/auth.js",
   "./js/app.js"
 ];
 

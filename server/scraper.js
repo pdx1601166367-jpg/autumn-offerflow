@@ -44,6 +44,11 @@ function decodeEntities(s) {
     .replace(/\s+/g, ' ').trim();
 }
 
+function genericJd(roles, company) {
+  const target = String(roles || company || '目标岗位');
+  return '岗位方向：' + target + '。\n岗位职责：负责' + target + '相关工作的需求分析、方案设计与落地推进，输出可量化结果；与研发、设计、运营等团队协作，持续跟进数据并迭代优化。\n任职要求：具备' + target + '相关基础和学习能力，逻辑清晰，沟通协作好，抗压能力强；具体 JD 与投递方式请以' + (company || '目标企业') + '官方招聘页面为准。';
+}
+
 function fromJsonLd(html, sourceUrl) {
   const out = [];
   const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
@@ -56,6 +61,7 @@ function fromJsonLd(html, sourceUrl) {
         if (!node || node['@type'] !== 'JobPosting') return;
         const org = (node.hiringOrganization && (node.hiringOrganization.name || node.hiringOrganization['@id'])) || new URL(sourceUrl).hostname;
         const loc = node.jobLocation && node.jobLocation.address ? (node.jobLocation.address.addressLocality || node.jobLocation.address.addressRegion || '') : '';
+        const desc = String(node.description || '').slice(0, 3000);
         out.push({
           type: 'campus',
           company: String(org).trim(),
@@ -64,7 +70,7 @@ function fromJsonLd(html, sourceUrl) {
           roles: node.title || '',
           cities: String(loc),
           link: node.url || sourceUrl,
-          jd: String(node.description || '').slice(0, 3000),
+          jd: desc || genericJd(node.title || '', org),
           note: 'JSON-LD 白名单抓取'
         });
       });
@@ -100,7 +106,7 @@ function fromLinks(html, sourceUrl, company) {
       roles: text.slice(0, 120),
       cities: '',
       link,
-      jd: '',
+      jd: genericJd(text.slice(0, 120), company || new URL(sourceUrl).hostname.replace(/^www\./, '')),
       note: '白名单链接抓取'
     });
   }

@@ -124,6 +124,10 @@
       ,["ai_value", ["是否有价值", "验证价值", "假设验证", "最小实验"]]
       ,["cold_start", ["冷启动", "推荐系统", "推荐冷启动"]]
       ,["pricing", ["定价", "怎么收费", "AI 功能定价"]]
+      ,["growth_exp", ["增长实验", "增长假设", "实验设计"]]
+      ,["metrics_board", ["指标体系", "指标看板", "北极星指标"]]
+      ,["ab_platform", ["A/B 实验平台", "实验平台", "分流实验"]]
+      ,["recall", ["召回策略", "沉默用户", "用户召回"]]
     ];
     let best = null, bestScore = 0;
     for (const [key, words] of rules) {
@@ -263,8 +267,8 @@
         body: JSON.stringify({
           model,
           messages: [
-            { role: "system", content: "你是简历 OCR 助手。请把图片中的文字完整、按原结构提取出来，保留换行；不要翻译、不要总结、不要添加任何评论。" },
-            { role: "user", content: [{ type: "text", text: "提取这张简历图片中的全部文字：" }, { type: "image_url", image_url: { url: dataUrl } }] }
+            { role: "system", content: "你是通用 OCR 助手。请把图片中的文字完整、按原结构提取出来，保留换行；不要翻译、不要总结、不要添加任何评论。" },
+            { role: "user", content: [{ type: "text", text: "提取这张图片中的全部文字：" }, { type: "image_url", image_url: { url: dataUrl } }] }
           ],
           temperature: 0.1,
           max_tokens: 2000

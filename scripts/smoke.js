@@ -104,19 +104,22 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     await page.fill('#agentGoal', '帮我准备阿里 AI 产品经理面试，还有 10 天');
     await page.click('[data-action="run-agent"]');
     await page.waitForSelector('#agentResultWrap');
-    await page.waitForFunction(() => document.body.innerText.includes('Agent 执行轨迹'));
+    await page.waitForFunction(() => document.body.innerText.includes('AI 助手执行轨迹'));
     const t = await page.textContent('#agentResultWrap');
     ok('agent trace shown', t.includes('analyze_jd') && t.includes('recommend_questions'));
     ok('agent mode badge', t.includes('本地降级') || t.includes('AI 驱动'));
     ok('agent plan shown', t.includes('Day 1'));
     ok('agent tasks shown', t.includes('建议行动任务'));
+    ok('agent jd full text', t.includes('查看 JD 全文'));
+    ok('agent missing jd help', t.includes('未检索到该岗位官方 JD'));
+    ok('agent recommended questions', await page.locator('[data-action="agent-practice"]').count() > 0);
     await page.click('[data-action="agent-confirm-tasks"]');
     await page.waitForTimeout(300);
     const taskCount = await page.evaluate(() => JSON.parse(localStorage.getItem('offerflow:v1')).tasks.length);
     ok('agent tasks created', taskCount > 0);
     await page.click('[data-action="agent-save-job"]');
     await page.waitForTimeout(300);
-    ok('agent job saved', await page.evaluate(() => JSON.parse(localStorage.getItem('offerflow:v1')).apps.some(a => a.channel === 'AI Agent')));
+    ok('agent job saved', await page.evaluate(() => JSON.parse(localStorage.getItem('offerflow:v1')).apps.some(a => a.channel === 'AI 助手')));
   });
 
   await step('solver', async () => {
@@ -127,6 +130,14 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     await page.waitForSelector('#solverResult .answer-block');
     const t = await page.textContent('#solverResult');
     ok('solver matched', t.includes('两数之和') && t.includes('复杂度'));
+    await page.waitForSelector('[data-action="toggle-solved"]');
+    await page.click('[data-action="toggle-solved"]');
+    ok('solved answer view', await page.locator('#solvedList .answer-block').first().isVisible());
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    await page.setInputFiles('#solverImage', { name: 'question.png', mimeType: 'image/png', buffer: png });
+    await page.waitForSelector('.tag', { hasText: '已加载图片' });
+    await page.click('[data-action="clear-solver-image"]');
+    ok('solver image upload clear', await page.locator('.tag', { hasText: '已加载图片' }).count() === 0);
   });
 
   await step('resume', async () => {
@@ -178,7 +189,7 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     const card = await page.locator('.card.panel', { hasText: '面试日历' }).textContent();
     ok('interview calendar shown', card.includes('面试日历'));
     ok('calendar countdown shown', card.includes('天后') || card.includes('小时后'));
-    ok('calendar seeded interview', card.includes('字节跳动'));
+    ok('calendar upcoming entries', card.includes('测试科技'));
   });
 
   await step('bank toggle', async () => {
@@ -193,6 +204,8 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     await goto(BASE + '/#/solver');
     const n = await page.evaluate(() => window.Data.solverDb.filter(p => p.type === '产品').length);
     ok('solver product problems >= 8', n >= 8, String(n));
+    const rendered = await page.locator('#view .q-card').count();
+    ok('whiteboard only product', rendered === n, rendered + ' / ' + n);
   });
 
   await step('self-test', async () => {
@@ -214,10 +227,10 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     await goto(BASE + '/#/reviews');
     ok('reviews seed list', (await page.textContent('#reviewList')).includes('前端'));
     await page.click('[data-action="agent-review-diagnosis"]');
-    await page.waitForSelector('.modal-head h3', { hasText: 'Agent 复盘诊断' });
+    await page.waitForSelector('.modal-head h3', { hasText: '复盘诊断' });
     await page.click('[data-action="diag-create-tasks"]');
     await page.waitForTimeout(300);
-    ok('review diagnosis tasks created', await page.evaluate(() => JSON.parse(localStorage.getItem('offerflow:v1')).tasks.some(t => t.note === 'Agent 复盘诊断生成')));
+    ok('review diagnosis tasks created', await page.evaluate(() => JSON.parse(localStorage.getItem('offerflow:v1')).tasks.some(t => t.note === '复盘诊断生成')));
     const dp = page.waitForEvent('download');
     await page.locator('[data-action="export-review"]').first().click();
     const d = await dp;

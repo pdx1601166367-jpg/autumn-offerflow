@@ -385,6 +385,9 @@
     ]
   };
 
+  const genericJd = (roles, company) => "岗位方向：" + roles + "。\n岗位职责：负责" + roles + "相关工作的需求分析、方案设计与落地推进，输出可量化结果；与研发、设计、运营等团队协作，持续跟进数据并迭代优化。\n任职要求：具备" + roles + "相关基础和学习能力，逻辑清晰，沟通协作好，抗压能力强；具体 JD 与投递方式请以" + (company || "目标企业") + "官方招聘页面为准。";
+  Object.keys(RESOURCES).forEach(k => RESOURCES[k].forEach(r => { if (!r.jd) r.jd = genericJd(r.roles || r.role || r.company, r.company); }));
+
   const SOLVER_DB = [
     {
       key: "two", title: "两数之和", type: "编程", tags: ["哈希表"],

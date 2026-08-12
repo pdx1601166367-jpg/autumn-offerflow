@@ -381,8 +381,8 @@ const server = http.createServer(async (req, res) => {
         if (!body.image) return sendJson(res, 400, { error: '缺少图片' });
         try {
           const r = await callAIProxy([
-            { role: 'system', content: '你是简历 OCR 助手。请把图片中的文字完整、按原结构提取出来，保留换行；不要翻译、不要总结、不要添加评论。' },
-            { role: 'user', content: [{ type: 'text', text: '提取这张简历图片中的全部文字：' }, { type: 'image_url', image_url: { url: body.image } }] }
+            { role: 'system', content: '你是通用 OCR 助手。请把图片中的文字完整、按原结构提取出来，保留换行；不要翻译、不要总结、不要添加评论。' },
+            { role: 'user', content: [{ type: 'text', text: '提取这张图片中的全部文字：' }, { type: 'image_url', image_url: { url: body.image } }] }
           ], 2000);
           if (r.error) return sendJson(res, 503, { error: r.error });
           return sendJson(res, 200, { content: r.content });

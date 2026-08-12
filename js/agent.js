@@ -49,9 +49,21 @@
   }
 
   function localJobSearch(goal, state, remoteItems) {
-    const pool = remoteItems && remoteItems.length ? remoteItems : (D.resources.campus || []);
+    const pool = remoteItems && remoteItems.length ? remoteItems : [].concat(D.resources.campus || [], D.resources.intern || [], D.resources.state || []);
     const found = pool.filter(r => goal.company && (r.company.includes(goal.company) || goal.company.includes(r.company)));
-    return found.length ? found : [{ company: goal.company || "目标企业", batch: "目标岗位", roles: goal.role, cities: "待确认", link: "", jd: "", note: "未检索到该岗位 JD，请提供 JD 文本或岗位链接" }];
+    if (found.length) return found;
+    const roleText = goal.role || "目标岗位";
+    const companyText = goal.company || "目标企业";
+    return [{
+      company: companyText,
+      batch: "目标岗位",
+      roles: roleText,
+      cities: "待确认",
+      link: "",
+      jd: "岗位方向：" + roleText + "。\n岗位职责：负责" + roleText + "相关工作的需求分析、方案设计与落地推进，输出可量化结果；与研发、设计、运营等团队协作，持续跟进数据并迭代优化。\n任职要求：具备" + roleText + "相关基础和学习能力，逻辑清晰，沟通协作好，抗压能力强；未收录官方 JD，具体任职要求请以" + companyText + "官网招聘页为准，或粘贴完整 JD 文本。",
+      jdSource: "generic",
+      note: "未收录官方 JD，已生成能力参考；粘贴 JD 文本或岗位链接可提升分析准确度"
+    }];
   }
 
   function extractKeywords(text) {
@@ -116,15 +128,48 @@
 
   function tasksFrom(goal, plan, cap) {
     const tasks = [];
-    tasks.push({ title: "分析 " + (goal.company || "目标企业") + " " + goal.role + " JD 并完成简历匹配", note: "Agent 生成" });
-    tasks.push({ title: "完成 Day 1 计划：" + plan[0], note: "Agent 生成" });
+    tasks.push({ title: "分析 " + (goal.company || "目标企业") + " " + goal.role + " JD 并完成简历匹配", note: "AI 助手生成" });
+    tasks.push({ title: "完成 Day 1 计划：" + plan[0], note: "AI 助手生成" });
     if (cap.weak.length) {
       const s = cap.stats.find(x => x.cat === cap.weak[0]) || { cat: cap.weak[0], score: 60 };
-      tasks.push({ title: "专项训练：" + cap.weak[0] + " 薄弱方向（当前平均 " + s.score + " 分）", note: "Agent 生成" });
+      tasks.push({ title: "专项训练：" + cap.weak[0] + " 薄弱方向（当前平均 " + s.score + " 分）", note: "AI 助手生成" });
     }
-    tasks.push({ title: "完成 1 次 AI 产品方向模拟面试并查看复盘", note: "Agent 生成" });
-    tasks.push({ title: "整理面试材料与提问清单", note: "Agent 生成" });
+    tasks.push({ title: "完成 1 次 AI 产品方向模拟面试并查看复盘", note: "AI 助手生成" });
+    tasks.push({ title: "整理面试材料与提问清单", note: "AI 助手生成" });
     return tasks.slice(0, 5);
+  }
+
+  function planDetailsFor(plan, goal, cap, jdKws) {
+    return (Array.isArray(plan) ? plan : []).map((p, i) => {
+      const theme = String(p).replace(/^Day\s*\d+\s*[：:]\s*/, "");
+      const points = [];
+      if (/匹配|JD|简历/.test(theme)) points.push("整理岗位职责与任职要求", "逐条对照简历，标记可量化证据", "列出需要补齐的能力与项目");
+      else if (/大模型|Agent|RAG|知识库/.test(theme)) points.push("复习核心概念并制作速记卡", "拆解一个真实 AI 产品案例", "准备 2-3 个高频追问的回答");
+      else if (/案例/.test(theme)) points.push("选择目标行业案例", "从用户、场景、方案、指标与风险展开", "输出一页产品拆解笔记");
+      else if (/数据|指标|评测/.test(theme)) points.push("复习核心指标与口径", "设计一个实验或评测方案", "结合练习数据补齐薄弱点");
+      else if (/模拟面试|复盘/.test(theme)) points.push("按目标岗位完成一次模拟面试", "回看复盘并提炼改进点", "把薄弱项加入明日任务");
+      else if (/专项|日历|材料|提问/.test(theme)) points.push("集中训练薄弱方向", "整理 STAR 案例与提问清单", "校准面试准备进度");
+      else points.push("完成当天核心学习", "输出可回顾笔记", "安排一次轻量练习");
+      const tasks = ["完成当天 1 个核心任务", "记录 3 条关键收获", "复盘并更新明日计划"];
+      return { day: i + 1, theme, points, tasks };
+    });
+  }
+
+  function gapDetailsFrom(gaps, cap, resumeText) {
+    return (Array.isArray(gaps) ? gaps : []).map(g => {
+      const text = String(g || "");
+      let dimension = "综合能力";
+      if (/简历|匹配|JD|岗位/.test(text)) dimension = "岗位匹配";
+      else if (/数据|指标|分析|评测/.test(text)) dimension = "数据与评测";
+      else if (/表达|结构|逻辑|STAR|沟通/.test(text)) dimension = "表达与逻辑";
+      else if (/产品|需求|用户|设计/.test(text)) dimension = "产品能力";
+      else if (/AI|大模型|RAG/.test(text)) dimension = "AI 产品能力";
+      else if (/英语|英文/.test(text)) dimension = "英语能力";
+      const evidence = cap && cap.stats && cap.stats.length
+        ? "练习记录：" + cap.stats.map(s => s.cat + " " + s.score + " 分").join("；")
+        : (resumeText ? "来自简历与岗位匹配分析" : "暂无足够数据，建议先完成一次模拟面试");
+      return { dimension, gap: text, evidence, action: "针对该维度安排专项训练，补足可量化案例，并在一周内复测" };
+    });
   }
 
   function buildMemory(state, opts, goal) {
@@ -134,8 +179,8 @@
     const goals = up.goals || {};
     return {
       profile: {
-        name: (up.basic && up.basic.name) || (state.profile && state.profile.name) || "未设置",
-        role: (goals.roles && goals.roles[0]) || (state.profile && state.profile.role) || "未设置",
+        name: (up.basic && up.basic.name) || "未设置",
+        role: (goals.roles && goals.roles[0]) || "未设置",
         stage: goals.stage || "",
         basic: up.basic || {},
         education: (up.education || []).map(x => x.raw).slice(0, 5),
@@ -191,7 +236,7 @@
     { name: "propose_tasks", desc: "生成待用户确认的行动任务", params: {} }
   ];
 
-  const SYSTEM_PROMPT = "你是 OfferFlow 求职 Agent。用户提出求职目标后，你必须自主规划并逐步调用工具。规则：\n" +
+  const SYSTEM_PROMPT = "你是 OfferFlow 求职助手。用户提出求职目标后，你必须自主规划并逐步调用工具。规则：\n" +
     "1. 每步只输出 JSON：{\"reasoning\":\"为什么做这步\",\"next_tool\":\"工具名\",\"params\":{}}；全部完成时输出 {\"reasoning\":\"...\",\"done\":true,\"result\":{\"matchScore\":0-100,\"strengths\":[],\"gaps\":[],\"plan\":[],\"tasks\":[],\"narrative\":\"最终结论\"}}。\n" +
     "2. 必须先调用 analyze_jd 或 search_job 获取岗位要求，再调用 analyze_resume / match_resume，再 analyze_capability / review_memory，最后 recommend_questions / generate_plan / propose_tasks。\n" +
     "3. 只能基于工具返回的真实数据做判断，不得编造用户练习记录、简历内容或岗位数据；数据缺失时在 gaps 或 narrative 中说明。\n" +
@@ -207,7 +252,9 @@
         const jobs = localJobSearch(ctx.goal, ctx.state, remote);
         ctx.jobs = jobs;
         const hasJd = jobs.some(j => j.jd && j.jd.trim());
-        return { summary: "检索到 " + jobs.length + " 条相关岗位" + (hasJd ? "（含官方 JD）" : "（未含官方 JD，需要用户提供 JD）") + "：" + jobs[0].company + " · " + jobs[0].batch, data: jobs.slice(0, 5) };
+        const hasOfficial = jobs.some(j => j.jd && j.jd.trim() && j.jdSource !== "generic");
+        const jdState = hasOfficial ? "含官方 JD" : hasJd ? "含能力参考 JD，官方 JD 未收录" : "未含 JD，需要用户提供 JD";
+        return { summary: "检索到 " + jobs.length + " 条相关岗位（" + jdState + "）：" + jobs[0].company + " · " + jobs[0].batch, data: jobs.slice(0, 5) };
       }
       case "analyze_jd": {
         if (ctx.opts.jd && ctx.opts.jd.trim()) {
@@ -308,7 +355,7 @@
     const hasCompleteReport = r && Array.isArray(r.plan) && r.plan.length && (Array.isArray(r.strengths) || Array.isArray(r.gaps));
     if (!hasCompleteReport) {
       const reportPrompt = [
-        { role: "system", content: "你是 OfferFlow 求职助手的报告生成器。基于工具返回的真实数据输出 JSON：{\"matchScore\":0-100,\"strengths\":[\"...\"],\"gaps\":[\"维度：具体问题 + 证据 + 行动\"],\"plan\":[\"Day 1：...\"],\"tasks\":[{\"title\":\"...\",\"note\":\"...\"}],\"narrative\":\"用 1. 2. 3. 4. 5. 输出至少 5 条分点结论（匹配度、最大优势、最大差距、优先行动、风险提示）\"}。只输出 JSON，不要 Markdown，不要编造数据。" },
+        { role: "system", content: "你是 OfferFlow 求职助手的报告生成器。基于工具返回的真实数据输出 JSON：{\"matchScore\":0-100,\"strengths\":[\"...\"],\"gaps\":[\"...\"],\"gapDetails\":[{\"dimension\":\"维度\",\"gap\":\"具体差距\",\"evidence\":\"证据\",\"action\":\"行动\"}],\"plan\":[\"Day 1：主题\"],\"planDetails\":[{\"day\":1,\"theme\":\"主题\",\"points\":[\"要点\"],\"tasks\":[\"任务\"]}],\"tasks\":[{\"title\":\"...\",\"note\":\"...\"}],\"narrative\":\"用 1. 2. 3. 4. 5. 输出至少 5 条分点结论（匹配度、最大优势、最大差距、优先行动、风险提示）\"}。只输出 JSON，不要 Markdown，不要编造数据。" },
         { role: "user", content: JSON.stringify({
           goal: goalText,
           jobs: ctx.jobs,
@@ -332,7 +379,7 @@
     }
     const cap = ctx.cap || capability(state);
     const plan = Array.isArray(r.plan) && r.plan.length ? r.plan : ctx.plan;
-    const tasks = Array.isArray(r.tasks) && r.tasks.length ? r.tasks.map(t => typeof t === "string" ? { title: t, note: "Agent 生成" } : t) : ctx.tasks;
+    const tasks = Array.isArray(r.tasks) && r.tasks.length ? r.tasks.map(t => typeof t === "string" ? { title: t, note: "AI 助手生成" } : t) : ctx.tasks;
     const ids = (Array.isArray(r.questionIds) && r.questionIds.length ? r.questionIds : ctx.ids);
     const finalIds = ids.length ? ids : recommend(state, ["AI 产品", "产品"], 5);
     const matchScore = typeof r.matchScore === "number" ? r.matchScore : (ctx.resume ? ctx.resume.score : 60);
@@ -341,9 +388,14 @@
       const s = cap.stats.find(x => x.cat === c) || { cat: c, score: 60 };
       return c + " 平均分 " + s.score;
     });
+    const resumeText = ctx.resumeText !== undefined ? ctx.resumeText : (opts.resumeText || "");
+    const gapDetails = (Array.isArray(r.gapDetails) && r.gapDetails.length)
+      ? r.gapDetails.map(g => typeof g === "string" ? { dimension: "综合能力", gap: g, evidence: "", action: "" } : g)
+      : gapDetailsFrom(gaps, cap, resumeText);
+    const planDetails = (Array.isArray(r.planDetails) && r.planDetails.length) ? r.planDetails : planDetailsFor(plan, goal, cap, ctx.jd ? ctx.jd.keywords : []);
     return {
       goal, jobs: ctx.jobs.length ? ctx.jobs : localJobSearch(goal, state), jd: ctx.jd || jdAnalysis(goal, opts),
-      resume: ctx.resume, matchScore, cap, mem: ctx.mem || reviewMemory(state), ids: finalIds, plan, tasks, strengths, gaps,
+      resume: ctx.resume, matchScore, cap, mem: ctx.mem || reviewMemory(state), ids: finalIds, plan, planDetails, tasks, strengths, gaps, gapDetails,
       trace, steps, ms: 0, mode: "ai", reportSource, deterministic: false, company: goal.company, role: goal.role,
       narrative: r.narrative || ""
     };
@@ -360,7 +412,7 @@
     const tool = (name, label, detail) => trace.push({ type: "tool", name, label, detail });
     tool("search_job", "搜索目标岗位", goal.company + " · " + goal.role);
     const jobs = localJobSearch(goal, state);
-    tool("analyze_jd", "分析岗位要求", "默认能力模型");
+    tool("analyze_jd", "分析岗位要求", opts.jd && opts.jd.trim() ? "用户提供 JD" : (jobs[0] && jobs[0].jd ? "岗位库 JD / 能力参考" : "默认能力模型"));
     const jd = jdAnalysis(goal, opts);
     const resumeText = opts.resumeText !== undefined ? opts.resumeText : readLatestResume(state);
     const resume = E.scoreResume(resumeText, opts.jd || "");
@@ -376,10 +428,13 @@
     tool("generate_plan", "生成准备计划", plan.length + " 天");
     const tasks = tasksFrom(goal, plan, cap);
     tool("propose_tasks", "生成行动任务", "建议 " + tasks.length + " 个任务（待用户确认）");
+    const strengths = resumeText.trim() ? ["简历已就绪，可进入匹配优化"] : [];
+    const gaps = cap.weak.map(c => c + " 平均分 " + (cap.stats.find(x => x.cat === c) || { score: 60 }).score);
+    const planDetails = planDetailsFor(plan, goal, cap, jd.keywords);
+    const gapDetails = gapDetailsFrom(gaps, cap, resumeText);
     const narrative = "1. 匹配分：" + resume.score + "/100；\n2. 最大优势：" + (strengths[0] || "简历已就绪，可进入匹配优化") + "；\n3. 主要差距：" + (gaps.join("；") || "暂无练习数据，建议先完成一次模拟面试") + "；\n4. 优先行动：完成 " + ids.length + " 道推荐题并安排一次模拟面试；\n5. 风险提示：当前为本地规则降级，配置 AI 后分析会更全面。";
     return {
-      goal, jobs, jd, resume, matchScore: resume.score, cap, mem, ids, plan, tasks,
-      strengths: resumeText.trim() ? ["简历已就绪"] : [], gaps: cap.weak.map(c => c + " 平均分 " + (cap.stats.find(x => x.cat === c) || { score: 60 }).score),
+      goal, jobs, jd, resume, matchScore: resume.score, cap, mem, ids, plan, planDetails, tasks, strengths, gaps, gapDetails,
       trace, steps: [], ms: Date.now() - t0, mode: "local", deterministic: true, company: goal.company, role: goal.role, narrative
     };
   }

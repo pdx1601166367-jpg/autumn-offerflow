@@ -3,7 +3,7 @@
   const Icon = window.Icon;
   const E = window.Engine;
   const LS_KEY = "offerflow:v1";
-  const APP_VERSION = "v2.4-onboarding";
+  const APP_VERSION = "v2.5";
   const $ = (s) => document.querySelector(s);
 
   function esc(v) {
@@ -35,7 +35,7 @@
 
   function defaultState() {
     return {
-      profile: { name: "林同学", role: "前端开发", aiEnabled: false, apiKey: "", apiBase: "https://api.openai.com/v1", model: "gpt-4o-mini" },
+      profile: { name: "", role: "", aiEnabled: false, apiKey: "", apiBase: "https://api.openai.com/v1", model: "gpt-4o-mini" },
       apps: JSON.parse(JSON.stringify(D.seedApps)),
       reviews: JSON.parse(JSON.stringify(D.seedReviews)),
       favorites: [],
@@ -115,6 +115,7 @@
   let resumeImage = null;
   let taskEditId = null;
   let lastSolve = null;
+  let solverImage = null;
   let syncTimer = null;
   let remoteApplying = false;
   let syncingOnce = false;
@@ -363,7 +364,7 @@
     afterRender(path, params);
     const av = $(".avatar");
     if (av) {
-      const uname = (S.userProfile.basic && S.userProfile.basic.name) || S.profile.name || (window.Auth && Auth.user() ? Auth.user().username : "访");
+      const uname = (S.userProfile.basic && S.userProfile.basic.name) || (window.Auth && Auth.user() ? Auth.user().username : "访");
       av.textContent = window.Auth && Auth.user() ? Auth.user().username.slice(0, 1).toUpperCase() : uname.slice(0, 1);
     }
     const pill = $("#aiPillText");
@@ -400,7 +401,28 @@
     if (path === "tracker") bindTracker();
     if (path === "resources") bindResources();
     if (path === "reviews" && params.get("open")) openReview(params.get("open"));
-    if (path === "solver" && $("#solverInput")) $("#solverInput").focus();
+    if (path === "solver") {
+      const input = $("#solverInput");
+      if (input) {
+        input.focus();
+        input.onpaste = e => {
+          const items = e.clipboardData && e.clipboardData.items;
+          if (!items) return;
+          for (const item of items) {
+            if (item.type && item.type.indexOf("image") === 0) {
+              const file = item.getAsFile();
+              if (file) {
+                e.preventDefault();
+                handleSolverImage(file);
+              }
+              break;
+            }
+          }
+        };
+      }
+      const fi = $("#solverImage");
+      if (fi) fi.addEventListener("change", e => { if (e.target.files && e.target.files[0]) handleSolverImage(e.target.files[0]); });
+    }
     if (path === "resume") {
       const fi = $("#resumeImg");
       if (fi) fi.addEventListener("change", handleResumeImage);
@@ -424,7 +446,7 @@
 
   function pageDashboard() {
     const apps = S.apps;
-    const upName = (S.userProfile.basic && S.userProfile.basic.name) || S.profile.name || "同学";
+    const upName = (S.userProfile.basic && S.userProfile.basic.name) || "同学";
     const upRole = (S.userProfile.goals && S.userProfile.goals.roles && S.userProfile.goals.roles[0]) || "未设置";
     const active = apps.filter(a => ["已投递", "笔试", "面试"].includes(a.status)).length;
     const offers = apps.filter(a => a.status === "Offer").length;
@@ -575,12 +597,10 @@
   }
 
   function pageAgent() {
+    if (agentView === "welcome") return profileWelcomeHtml();
+    if (agentView === "confirm" && agentParsed) return profileConfirmHtml();
+    if (agentView === "goals") return profileGoalsHtml();
     if (agentView === "home") return agentHomeHtml();
-    if (!S.userProfile.complete) {
-      if (agentView === "confirm" && agentParsed) return profileConfirmHtml();
-      if (agentView === "goals") return profileGoalsHtml();
-      return profileWelcomeHtml();
-    }
     return agentHomeHtml();
   }
 
@@ -612,7 +632,7 @@
     const skills = p.skills || {};
     return `
       <div class="card panel" style="margin-bottom:14px">
-        <div class="panel-head"><div><h2>我从你的简历中识别出了这些信息</h2><div class="sub">请确认信息是否准确，确认后将成为 Agent 分析你的基础。</div></div>
+        <div class="panel-head"><div><h2>我从你的简历中识别出了这些信息</h2><div class="sub">请确认信息是否准确，确认后将成为 AI 助手分析你的基础。</div></div>
           ${agentParsed && agentParsed.warning ? badge("解析提示", "b-amber") : badge("AI 解析", "b-teal")}</div>
         ${agentParsed && agentParsed.warning ? '<div class="note">' + Icon("alert-circle") + "<span>" + esc(agentParsed.warning) + "</span></div>" : ""}
         <div class="form-grid">
@@ -646,7 +666,7 @@
     const chip = (label, active, action, value) => '<button type="button" class="option-chip' + (active ? " active" : "") + '" data-action="' + action + '" data-value="' + esc(value) + '">' + esc(label) + "</button>";
     return `
       <div class="card panel">
-        <div class="panel-head"><div><h2>你现在想做什么？</h2><div class="sub">告诉 Agent 求职目标，之后它会基于这些信息做个性化规划。</div></div>${badge("求职目标", "b-teal")}</div>
+        <div class="panel-head"><div><h2>你现在想做什么？</h2><div class="sub">告诉 AI 助手求职目标，之后它会基于这些信息做个性化规划。</div></div>${badge("求职目标", "b-teal")}</div>
         <div class="form-grid">
           <div class="form-item full"><label>目标岗位（必选，可多选）</label>
             <div class="pill-row">${roleOptions.map(r => chip(r, g.roles.includes(r), "agent-role", r)).join("")}</div>
@@ -698,7 +718,7 @@
         <div class="score-grid" style="grid-template-columns:110px 1fr">
           <div class="ring" style="--val:${up.completeness}"><div><b>${up.completeness}</b><span>完整度</span></div></div>
           <div>
-            ${up.complete ? "" : '<div class="note">' + Icon("alert-circle") + "<span>暂时没有简历也可以使用 Agent，但缺少个人经历时部分分析只能提供通用建议。</span></div>"}
+            ${up.complete ? "" : '<div class="note">' + Icon("alert-circle") + "<span>暂时没有简历也可以使用 AI 助手，但缺少个人经历时部分分析只能提供通用建议。</span></div>"}
             <div class="dim-row"><span>基础信息</span><div class="progress"><i style="width:${up.basic && up.basic.school ? 100 : 30}%"></i></div><b>${up.basic && up.basic.school ? "✓" : "○"}</b></div>
             <div class="dim-row"><span>教育经历</span><div class="progress"><i style="width:${up.education.length ? 100 : 20}%"></i></div><b>${up.education.length ? "✓" : "○"}</b></div>
             <div class="dim-row"><span>项目经历</span><div class="progress"><i style="width:${up.projects.length ? 100 : 20}%"></i></div><b>${up.projects.length ? "✓" : "○"}</b></div>
@@ -707,7 +727,7 @@
           </div>
         </div>
       </div>
-      ${!window.OFFERFLOW_BACKEND && (!S.profile.aiEnabled || !S.profile.apiKey) ? '<div class="note" style="margin-bottom:14px">' + Icon("lightbulb") + "<span>当前为本地规则引擎（未配置 AI 接口）。配置 AI 接口或部署后端后，Agent 将由大模型驱动规划、工具调用与动态决策。</span></div>" : ""}
+      ${!window.OFFERFLOW_BACKEND && (!S.profile.aiEnabled || !S.profile.apiKey) ? '<div class="note" style="margin-bottom:14px">' + Icon("lightbulb") + "<span>当前为本地规则引擎（未配置 AI 接口）。配置 AI 接口或部署后端后，AI 助手将由大模型驱动规划、工具调用与动态决策。</span></div>" : ""}
       <div class="card panel" style="margin-bottom:14px">
         <div class="form-item full" style="margin-bottom:12px"><label>快捷任务</label>
           <div class="pill-row">${starters.map(s => '<button type="button" class="option-chip" data-action="agent-starter" data-value="' + esc(s[1]) + '">' + esc(s[0]) + "</button>").join("")}</div>
@@ -716,14 +736,14 @@
           <div class="form-item full"><label>求职目标</label>
             <textarea id="agentGoal" rows="3" placeholder="例如：帮我看看我和阿里 AI 产品经理岗位还有哪些差距">${esc(agentInput)}</textarea></div>
           </div>
-          <div class="form-item full"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="agentShowJd" data-action="agent-toggle-jd" ${agentShowJd ? "checked" : ""} style="accent-color:var(--brand)"> 附带岗位 JD 文本</label></div>
+          <div class="form-item full"><label style="display:inline-flex;align-items:center;gap:6px;font-weight:600;cursor:pointer"><input type="checkbox" id="agentShowJd" data-action="agent-toggle-jd" ${agentShowJd ? "checked" : ""} style="width:16px;height:16px;margin:0;accent-color:var(--brand)"> 附带岗位 JD 文本</label></div>
           ${agentShowJd ? '<div class="form-item full"><label>JD 文本</label><textarea id="agentJdText" rows="5" placeholder="粘贴目标岗位 JD…"></textarea></div>' : ""}
         </div>
         <div style="display:flex;gap:8px;margin-top:12px">
-          <button class="btn btn-primary" data-action="run-agent">${Icon("bot")}让 Agent 执行</button>
+          <button class="btn btn-primary" data-action="run-agent">${Icon("bot")}开始分析</button>
         </div>
       </div>
-      <div id="agentResultWrap">${agentResult ? agentResultHtml(agentResult) : '<div class="card empty">' + Icon("bot") + "<h3>还没有执行任务</h3><p>输入一个求职目标，让 Agent 开始分析。</p></div>"}</div>`;
+      <div id="agentResultWrap">${agentResult ? agentResultHtml(agentResult) : '<div class="card empty">' + Icon("bot") + "<h3>还没有执行任务</h3><p>输入一个求职目标，让 AI 助手开始分析。</p></div>"}</div>`;
   }
 
   function base64ToText(b64) {
@@ -854,19 +874,37 @@
         <div style="padding:0 12px 10px 34px;font-size:12.5px;color:var(--ink-2);line-height:1.6">${esc(detail)}</div>
       </details>`;
     }).join("");
-    const planHtml = r.plan.map((p, i) => `<div class="list-row"><div class="grow"><h4>${esc(p)}</h4></div>${badge("Day " + (i + 1), "b-gray")}</div>`).join("");
+    const rawPlan = (Array.isArray(r.plan) && r.plan.length) ? r.plan : [];
+    const planList = (Array.isArray(r.planDetails) && r.planDetails.length) ? r.planDetails : rawPlan.map((p, i) => {
+      const theme = typeof p === "string" ? p.replace(/^Day\s*\d+\s*[：:]\s*/, "") : (p.theme || p.title || String(p));
+      return { day: i + 1, theme, points: Array.isArray(p.points) ? p.points : [], tasks: Array.isArray(p.tasks) ? p.tasks : [] };
+    });
+    const planHtml = planList.map(d => {
+      const points = Array.isArray(d.points) ? d.points : [];
+      const tasks = Array.isArray(d.tasks) ? d.tasks : [];
+      return `
+      <div style="padding:14px 0;border-bottom:1px solid var(--line-2)">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${badge("Day " + (d.day || ""), "b-teal")}<h4 style="font-size:14px">${esc(d.theme || "当日计划")}</h4></div>
+        ${points.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:9px">' + points.map(pt => '<div style="font-size:12.5px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-2);border-radius:6px;padding:8px 10px;line-height:1.5">' + esc(pt) + "</div>").join("") + "</div>" : ""}
+        ${tasks.length ? '<div style="margin-top:8px;font-size:12px;color:var(--ink-3);line-height:1.6">' + tasks.map((t, ti) => '<span style="display:inline-block;margin-right:12px">' + (ti + 1) + ". " + esc(t) + "</span>").join("") + "</div>" : ""}
+      </div>`;
+    }).join("");
     const qHtml = r.ids.map(id => {
       const q = D.questions.find(x => x.id === id);
       if (!q) return "";
       return `<div class="list-row"><div class="grow"><h4>${esc(q.q)}</h4><div class="q-meta" style="margin-top:4px">${badge(q.cat, "b-teal")}${badge(q.diff, DIFF_COLOR[q.diff])}</div></div>
         <button class="btn btn-sm" data-action="agent-practice" data-id="${q.id}">${Icon("play")}练习</button></div>`;
     }).join("");
+    const gapList = (Array.isArray(r.gapDetails) && r.gapDetails.length) ? r.gapDetails : (Array.isArray(r.gaps) && r.gaps.length ? r.gaps.map(g => ({ dimension: "综合能力", gap: g, evidence: "来自简历、练习与复盘分析", action: "安排专项训练并补充可量化案例" })) : []);
+    const gapHtml = gapList.length ? `<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>维度</th><th>差距</th><th>证据</th><th>行动</th></tr></thead><tbody>${gapList.map(g => { const gg = typeof g === "string" ? { dimension: "综合能力", gap: g } : g; return '<tr><td class="cell-main">' + esc(gg.dimension || "综合能力") + "</td><td>" + esc(gg.gap || gg.dimension || "") + "</td><td>" + esc(gg.evidence || "来自分析数据") + "</td><td>" + esc(gg.action || "安排专项训练并复测") + "</td></tr>"; }).join("")}</tbody></table></div>` : "";
+    const jdFull = (r.jd && r.jd.jd) || (r.jobs[0] && r.jobs[0].jd) || "";
+    const jdMissing = !!(r.jd && r.jd.missingJd) || !!(r.jobs[0] && r.jobs[0].note && String(r.jobs[0].note).indexOf("未收录") >= 0);
     return `
       <div class="card panel" style="margin-bottom:14px">
-        <div class="panel-head"><div><h2>Agent 执行轨迹</h2><div class="sub">${r.mode === "ai" ? "LLM 决策 + 工具执行 + 中间结果回喂" : "本地规则引擎（降级模式）"}</div></div>
+        <div class="panel-head"><div><h2>AI 助手执行轨迹</h2><div class="sub">${r.mode === "ai" ? "LLM 决策 + 工具执行 + 中间结果回喂" : "本地规则引擎（降级模式）"}</div></div>
           ${badge(r.mode === "ai" ? "AI 驱动 · " + (r.steps ? r.steps.length : 0) + " 步决策" + (r.reportSource === "llm" ? " · 报告 LLM 生成" : "") : "本地降级", r.mode === "ai" ? "b-teal" : "b-gray")}</div>
         ${traceHtml}
-        ${r.narrative ? '<div class="answer-block" style="margin-top:10px;border-left:3px solid var(--brand)"><h4>Agent 最终结论</h4><div style="line-height:1.7">' + nl(r.narrative) + "</div></div>" : ""}
+        ${r.narrative ? '<div class="answer-block" style="margin-top:10px;border-left:3px solid var(--brand)"><h4>最终结论</h4><div style="line-height:1.7">' + nl(r.narrative) + "</div></div>" : ""}
       </div>
       <div class="grid grid-2" style="margin-bottom:14px">
         <div class="card panel">
@@ -880,16 +918,18 @@
               ${r.gaps.map(g => '<div style="font-size:13px;color:var(--amber);margin:3px 0">▲ ' + esc(g) + "</div>").join("") || '<div style="font-size:13px;color:var(--ink-3)">暂无练习数据，建议先完成一次模拟面试</div>'}
             </div>
           </div>
+          ${gapHtml}
         </div>
         <div class="card panel">
-          <div class="panel-head"><div><h2>岗位信息</h2><div class="sub">来自 Job Search Tool</div></div>
+          <div class="panel-head"><div><h2>岗位信息</h2><div class="sub">来自 AI 助手检索</div></div>
             ${r.jobs[0] && r.jobs[0].link ? '<a class="btn btn-sm" href="' + esc(r.jobs[0].link) + '" target="_blank" rel="noopener">' + Icon("link") + "打开</a>" : ""}</div>
           ${(r.jobs[0] ? '<div class="list-row"><div class="grow"><h4>' + esc(r.jobs[0].company) + "</h4><p>" + esc(r.jobs[0].batch) + " · " + esc(r.jobs[0].roles) + " · " + esc(r.jobs[0].cities) + "</p></div></div>" : "")}
-          <div class="answer-block"><h4>JD 关键要求</h4><p style="line-height:1.7">${esc(r.jd.keywords.join("、"))}</p></div>
+          <div class="answer-block"><h4>JD 关键要求</h4><p style="line-height:1.7">${esc(r.jd.keywords.join("、"))}</p>${jdFull ? '<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12.5px;font-weight:600;color:var(--brand-dark)">查看 JD 全文</summary><p style="white-space:pre-line;max-height:220px;overflow:auto;margin-top:8px;line-height:1.7">' + esc(jdFull) + "</p></details>" : ""}</div>
+          ${jdMissing ? '<div class="note" style="margin-top:10px;margin-bottom:0">' + Icon("alert-circle") + "<span>未检索到该岗位官方 JD。建议勾选“附带岗位 JD 文本”粘贴完整 JD，或提供岗位链接后重新分析。</span></div>" : ""}
         </div>
       </div>
       <div class="card panel" style="margin-bottom:14px">
-        <div class="panel-head"><div><h2>${r.plan.length} 天准备计划</h2><div class="sub">Training Plan Tool 生成，可执行后按日完成</div></div>${badge("动态可调整", "b-teal")}</div>
+        <div class="panel-head"><div><h2>${r.plan.length} 天准备计划</h2><div class="sub">AI 助手生成，按日主题、要点与任务推进</div></div>${badge("动态可调整", "b-teal")}</div>
         ${planHtml}
       </div>
       <div class="grid grid-2" style="margin-bottom:14px">
@@ -898,8 +938,8 @@
           ${qHtml || '<div class="empty">' + Icon("book") + "<h3>暂无可推荐题目</h3></div>"}
         </div>
         <div class="card panel">
-          <div class="panel-head"><div><h2>建议行动任务</h2><div class="sub">高风险操作需你确认后执行</div></div>${badge("Human-in-the-loop", "b-amber")}</div>
-          ${r.tasks.map(t => `<div class="list-row"><div class="grow"><h4>${esc(t.title)}</h4><p>${esc(t.note)}</p></div></div>`).join("")}
+          <div class="panel-head"><div><h2>建议行动任务</h2><div class="sub">需你确认后才会创建</div></div>${badge("人工确认", "b-amber")}</div>
+          ${r.tasks.map(t => `<div class="list-row"><div class="grow"><h4>${esc(t.title)}</h4><p>${esc(t.note || "AI 助手生成")}</p></div></div>`).join("")}
           <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
             <button class="btn btn-primary" data-action="agent-confirm-tasks">${Icon("check")}确认创建任务</button>
             <button class="btn" data-action="agent-save-job">${Icon("briefcase")}保存岗位到投递</button>
@@ -919,19 +959,19 @@
     agentResult = null;
     render();
     const box = $("#agentResultWrap");
-    if (box) box.innerHTML = '<div class="card empty">' + Icon("bot") + "<h3>Agent 正在执行…</h3><p>LLM 规划 → 调用工具 → 读取中间结果 → 动态决策</p></div>";
+    if (box) box.innerHTML = '<div class="card empty">' + Icon("bot") + "<h3>AI 助手正在分析…</h3><p>AI 规划 → 调用工具 → 读取中间结果 → 动态决策</p></div>";
     const t0 = Date.now();
     agentResult = await window.Agent.runGoal(goal, { jd, resumeText, state: S, profile: S.profile });
     agentResult.ms = Date.now() - t0;
     render();
     if (agentResult.mode === "local" && canUseAI()) {
       const prompt = [
-        { role: "system", content: "你是 OfferFlow 求职 Agent 的决策层。基于本地工具结果，用 120 字以内补充最有价值的一条判断与一个可执行建议，不要重复已有信息。" },
+        { role: "system", content: "你是 OfferFlow 求职助手的决策层。基于本地工具结果，用 120 字以内补充最有价值的一条判断与一个可执行建议，不要重复已有信息。" },
         { role: "user", content: "目标：" + goal + "\n工具摘要：" + JSON.stringify({ matchScore: agentResult.matchScore, gaps: agentResult.gaps, plan: agentResult.plan.slice(0, 3), tasks: agentResult.tasks.map(t => t.title) }) }
       ];
       E.callAI(prompt, S.profile).then(res => {
         const el = $("#agentAiInsight");
-        if (el && res) el.innerHTML = '<div class="answer-block" style="border-left:3px solid var(--brand)"><h4>Agent 决策洞察</h4><div style="line-height:1.7">' + nl(res) + "</div></div>";
+        if (el && res) el.innerHTML = '<div class="answer-block" style="border-left:3px solid var(--brand)"><h4>AI 决策洞察</h4><div style="line-height:1.7">' + nl(res) + "</div></div>";
       });
     }
   }
@@ -957,8 +997,8 @@
     S.apps.unshift({
       id: uid(), company: agentResult.company, role: agentResult.role,
       city: job.cities && job.cities !== "待确认" ? job.cities : "",
-      channel: "AI Agent", status: "意向", applyDate: today(),
-      link: job.link || "", note: "来自 AI 求职 Agent"
+      channel: "AI 助手", status: "意向", applyDate: today(),
+      link: job.link || "", note: "来自 AI 求职助手"
     });
     save();
     render();
@@ -976,7 +1016,7 @@
       return q ? '<div class="list-row"><div class="grow"><h4>' + esc(q.q) + "</h4><p>" + esc(q.cat) + " · " + esc(q.diff) + "</p></div></div>" : "";
     }).join("");
     showModal(`
-      <div class="modal-head"><h3>Agent 复盘诊断</h3><button class="icon-btn" data-action="close-modal">${Icon("x")}</button></div>
+      <div class="modal-head"><h3>复盘诊断</h3><button class="icon-btn" data-action="close-modal">${Icon("x")}</button></div>
       <div class="modal-body">
         <p style="font-size:13.5px;line-height:1.7;color:var(--ink-2);margin-bottom:12px">分析最近 ${S.reviews.length} 场复盘，识别重复出现的改进点：</p>
         ${top.length ? top.map(t => `<div style="padding:9px 12px;border:1px solid var(--line-2);border-radius:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px">${esc(t[0])}</span>${badge("出现 " + t[1] + " 次", t[1] >= 3 ? "b-red" : "b-amber")}</div>`).join("") : '<div class="empty">' + Icon("check-circle") + "<h3>未发现重复问题</h3><p>继续保持当前训练节奏</p></div>"}
@@ -998,18 +1038,18 @@
     const box = $("#resumeResult");
     const before = E.scoreResume(text, jd).score;
     if (canUseAI()) {
-      if (box) box.innerHTML = '<div class="empty">' + Icon("bot") + "<h3>Agent 简历优化中…</h3><p>分析 → 改写 → 再评估，最多等待 60 秒</p></div>";
+      if (box) box.innerHTML = '<div class="empty">' + Icon("bot") + "<h3>AI 简历优化中…</h3><p>分析 → 改写 → 再评估，最多等待 60 秒</p></div>";
       const prompt = [
-        { role: "system", content: "你是 AI 产品经理招聘简历 Agent。请完成：1.【优化前匹配分】2.【改写后简历】用 Markdown 输出可直接使用的简历 3.【优化后匹配分】4.【关键改动说明】。先分析再改写再评估，不要客套。" },
+        { role: "system", content: "你是 AI 产品经理招聘简历优化专家。请完成：1.【优化前匹配分】2.【改写后简历】用 Markdown 输出可直接使用的简历 3.【优化后匹配分】4.【关键改动说明】。先分析岗位与简历匹配度，再逐段改写并说明亮点，不要客套。" },
         { role: "user", content: "JD：\n" + jd + "\n\n简历：\n" + text }
       ];
       const res = await E.callAI(prompt, S.profile);
       if (!res) {
-        if (box) box.innerHTML = '<div class="note">' + Icon("alert-circle") + "<span>Agent 调用失败，已回退本地优化。</span></div>";
+        if (box) box.innerHTML = '<div class="note">' + Icon("alert-circle") + "<span>AI 调用失败，已回退本地优化。</span></div>";
         localResumeAgent(text, jd, before, box);
         return;
       }
-      if (box) box.innerHTML = '<div class="card panel" style="border-color:var(--line)"><div class="panel-head"><div><h2>Agent 简历优化结果</h2><div class="sub">分析 → 改写 → 再评估</div></div>' + badge("AI 生成", "b-teal") + '</div><div style="margin-top:12px"><textarea id="agentResumeText" rows="16">' + esc(res) + '</textarea><div style="margin-top:10px"><button class="btn btn-primary btn-sm" data-action="apply-agent-resume">' + Icon("check") + "应用改写后简历</button></div></div>";
+      if (box) box.innerHTML = '<div class="card panel" style="border-color:var(--line)"><div class="panel-head"><div><h2>AI 简历优化结果</h2><div class="sub">分析岗位匹配度 → 改写 → 再评估</div></div>' + badge("AI 生成", "b-teal") + '</div><div style="margin-top:12px"><textarea id="agentResumeText" rows="16">' + esc(res) + '</textarea><div style="margin-top:10px"><button class="btn btn-primary btn-sm" data-action="apply-agent-resume">' + Icon("check") + "应用改写后简历</button></div></div>";
     } else {
       localResumeAgent(text, jd, before, box);
     }
@@ -1019,11 +1059,11 @@
     const r1 = E.scoreResume(text, jd);
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     r1.suggestions.slice(0, 3).forEach((s, i) => {
-      lines.push("Agent 优化 " + (i + 1) + "：" + s.replace(/[。；;]$/, "") + "（示例：主导 XX 项目，XX 指标提升 40%）");
+      lines.push("AI 优化 " + (i + 1) + "：" + s.replace(/[。；;]$/, "") + "（示例：主导 XX 项目，XX 指标提升 40%）");
     });
     const improved = lines.join("\n");
     const after = E.scoreResume(improved, jd).score;
-    if (box) box.innerHTML = '<div class="card panel" style="border-color:var(--line)"><div class="panel-head"><div><h2>Agent 简历优化（本地引擎）</h2><div class="sub">分析 → 建议 → 再评估</div></div>' + badge("离线可用", "b-teal") + '</div><div class="score-grid"><div><div class="dim-row"><span>优化前</span><div class="progress"><i style="width:' + before + '%"></i></div><b>' + before + '</b></div><div class="dim-row"><span>优化后</span><div class="progress"><i style="width:' + after + '%;background:var(--green)"></i></div><b>' + after + '</b></div></div><div class="answer-block"><h4>应用建议</h4>' + r1.suggestions.map(s => "<div style='font-size:13px;margin:4px 0'>· " + esc(s) + "</div>").join("") + '</div></div><div class="answer-block" style="margin-top:12px"><h4>优化后简历预览</h4><textarea id="agentResumeText" rows="12">' + esc(improved) + '</textarea><div style="margin-top:10px"><button class="btn btn-primary btn-sm" data-action="apply-agent-resume">' + Icon("check") + "应用到编辑器</button></div></div></div>";
+    if (box) box.innerHTML = '<div class="card panel" style="border-color:var(--line)"><div class="panel-head"><div><h2>AI 简历优化（本地引擎）</h2><div class="sub">分析岗位匹配度 → 建议 → 再评估</div></div>' + badge("离线可用", "b-teal") + '</div><div class="score-grid"><div><div class="dim-row"><span>优化前</span><div class="progress"><i style="width:' + before + '%"></i></div><b>' + before + '</b></div><div class="dim-row"><span>优化后</span><div class="progress"><i style="width:' + after + '%;background:var(--green)"></i></div><b>' + after + '</b></div></div><div class="answer-block"><h4>匹配差距与改写建议</h4>' + r1.suggestions.map(s => "<div style='font-size:13px;margin:4px 0'>· " + esc(s) + "</div>").join("") + '</div></div><div class="answer-block" style="margin-top:12px"><h4>优化后简历预览</h4><textarea id="agentResumeText" rows="12">' + esc(improved) + '</textarea><div style="margin-top:10px"><button class="btn btn-primary btn-sm" data-action="apply-agent-resume">' + Icon("check") + "应用到编辑器</button></div></div></div>";
   }
 
   function taskModal(task) {
@@ -1409,13 +1449,20 @@
   }
 
   function pageSolver() {
+    const whiteboard = D.solverDb.filter(p => p.type === "产品");
     return `
       <div class="side-stack">
           <div class="card panel">
             <div class="panel-head"><div><h2>智能解题</h2><div class="sub">粘贴题目文本，AI 深度解析；未配置 AI 时使用本地引擎</div></div>${badge("AI + 本地", "b-teal")}</div>
             <div class="form-grid">
-              <div class="form-item full"><label>题目文本</label>
-                <textarea id="solverInput" rows="8" placeholder="例如：给定一个整数数组 nums 和目标值 target，请找出和为目标值的那两个整数并返回下标。"></textarea></div>
+              <div class="form-item full"><label>题目文本（支持直接粘贴图片）</label>
+                <textarea id="solverInput" rows="8" placeholder="例如：设计一个 AI 客服产品，说明目标用户、核心流程与衡量指标。也可以直接 Ctrl+V 粘贴题目截图。"></textarea>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+                  <label class="btn btn-sm" style="display:inline-flex;align-items:center;gap:6px;margin:0">${Icon("upload")}上传题目图片<input type="file" id="solverImage" accept="image/*" hidden></label>
+                  ${solverImage ? '<span class="tag">已加载图片</span><button class="btn btn-sm" data-action="clear-solver-image">' + Icon("x") + "移除</button>" : ""}
+                  ${solverImage ? '<img src="' + solverImage + '" alt="题目图片" style="max-height:56px;border-radius:6px;border:1px solid var(--line)">' : ""}
+                </div>
+              </div>
               <div class="form-item"><label>题目类型</label>
                 <select id="solverType"><option>编程</option><option>逻辑</option><option>选择</option><option>读图</option><option>英语</option><option>综合</option></select></div>
               <div style="display:flex;align-items:flex-end"><button class="btn btn-primary" data-action="solve">${Icon("scan")}智能分析</button></div>
@@ -1425,23 +1472,62 @@
           <div class="card panel">
             <div class="panel-head"><div><h2>最近解题</h2><div class="sub">保存最近 ${Math.min(20, S.solved.length)} 条</div></div>
               ${S.solved.length ? '<button class="btn btn-sm" data-action="clear-solved">' + Icon("trash") + "清空</button>" : ""}</div>
-            <div id="solvedList">${S.solved.length ? S.solved.map(x => '<div class="list-row"><div class="grow"><h4>' + esc(x.title) + "</h4><p>" + esc(x.text.slice(0, 60)) + "…</p></div>" + badge(x.matched ? "命中" : "通用", x.matched ? "b-green" : "b-gray") + "</div>").join("") : '<div class="empty">' + Icon("history") + "<h3>暂无记录</h3><p>分析过的题目会出现在这里</p></div>"}</div>
+            <div id="solvedList">${S.solved.length ? S.solved.map(x => { const sid = x.id || "s" + x.time; return '<div class="list-row"><div class="grow"><h4>' + esc(x.title) + "</h4><p>" + esc(x.text.slice(0, 60)) + "…</p></div>" + badge(x.matched ? "命中" : "通用", x.matched ? "b-green" : "b-gray") + (x.result ? '<button class="btn btn-sm" data-action="toggle-solved" data-id="' + esc(sid) + '">' + Icon("eye") + "查看答案</button>" : "") + '</div>' + (x.result ? '<div id="solvedAnswer-' + esc(sid) + '" style="display:none">' + solverResultHtml(x.result) + "</div>" : ""); }).join("") : '<div class="empty">' + Icon("history") + "<h3>暂无记录</h3><p>分析过的题目会出现在这里</p></div>"}</div>
           </div>
         </div>
         <div class="card panel">
-          <div class="panel-head"><div><h2>白板练习</h2><div class="sub">内置高频笔试题，可展开提示与解法</div></div>${badge(D.solverDb.length + " 题", "b-blue")}</div>
-          ${D.solverDb.map(p => `
+          <div class="panel-head"><div><h2>白板练习</h2><div class="sub">内置高频产品题，可展开提示与解法</div></div>${badge(whiteboard.length + " 题", "b-blue")}</div>
+          ${whiteboard.map(p => `
             <details class="q-card" style="padding:0">
               <summary style="cursor:pointer;padding:13px 14px;font-weight:600;font-size:14px;list-style:none">${esc(p.title)} <span style="font-weight:400;color:var(--ink-3);font-size:12px">· ${p.tags.join(" / ")}</span></summary>
               <div style="padding:0 14px 14px">
                 <div class="answer-block"><h4>提示</h4>${esc(p.hint)}</div>
                 <div class="answer-block"><h4>解题思路</h4><span style="white-space:pre-line">${esc(p.approach)}</span></div>
-                <pre>${esc(p.code)}</pre>
+                ${p.code ? "<pre>" + esc(p.code) + "</pre>" : ""}
                 <div style="font-size:12.5px;color:var(--ink-3)">${esc(p.complexity)}</div>
               </div>
             </details>`).join("")}
         </div>
       </div>`;
+  }
+
+  function handleSolverImage(file) {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { toast("图片超过 10MB 限制"); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      solverImage = String(ev.target.result);
+      render();
+      toast("题目图片已加载，点击智能分析即可识别");
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function recordSolve(text, result) {
+    lastSolve = result;
+    S.solved.unshift({ id: uid(), title: result.title, text: text.slice(0, 120), matched: !!result.matched, time: nowStr(), result });
+    S.solved = S.solved.slice(0, 20);
+    save();
+    render();
+  }
+
+  async function solveText(text, type, local, box) {
+    if (canUseAI()) {
+      if (box) box.innerHTML = '<div class="empty">' + Icon("sparkles") + "<h3>AI 解析中…</h3><p>正在分析题目，最多等待 40 秒</p></div>";
+      const prompt = [
+        { role: "system", content: "你是资深 AI 产品笔试与面试解析专家。根据题目类型输出：1. 标准答案 2. 答题思路与要点 3. 举例说明；产品题给结构化方案，编程题额外给复杂度与示例代码。直接输出，不要客套。" },
+        { role: "user", content: "题目类型：" + type + "\n题目：" + text }
+      ];
+      try {
+        const res = await E.callAI(prompt, S.profile);
+        if (!res) throw new Error("ai-failed");
+        recordSolve(text, { matched: false, title: "AI 深度解析", type, approach: res, code: null, complexity: "AI 生成", hint: "", tags: [type] });
+      } catch (e) {
+        recordSolve(text, { matched: local.matched, title: local.matched ? local.title + "（AI 失败回退）" : "本地解析（AI 失败回退）", type, approach: local.approach, code: local.code, complexity: local.complexity, hint: local.hint, tags: local.tags });
+      }
+    } else {
+      recordSolve(text, { matched: local.matched, title: local.matched ? local.title + "（本地解析）" : "本地解析", type, approach: local.approach, code: local.code, complexity: local.complexity, hint: local.hint, tags: local.tags });
+    }
   }
 
   function solverResultHtml(r) {
@@ -1924,8 +2010,6 @@
       if (b.userProfile && (!S.userProfile.complete || b.userProfile.complete)) S.userProfile = Object.assign(emptyUserProfile(), b.userProfile);
       S.favorites = Array.from(new Set(S.favorites.concat(b.favorites || [])));
       S.mastered = Array.from(new Set(S.mastered.concat(b.mastered || [])));
-      if (b.profile && b.profile.name) S.profile.name = b.profile.name;
-      if (b.profile && b.profile.role) S.profile.role = b.profile.role;
     }
     backupPending = null;
     save();
@@ -2383,7 +2467,7 @@
     switch (act) {
       case "navigate": navigate(id); break;
       case "toggle-menu": $("#sidebar").classList.toggle("open"); break;
-      case "agent-goal": agentInput = el.dataset.value; runAgentAction(); break;
+      case "agent-goal": agentInput = el.dataset.value; render(); break;
       case "agent-toggle-jd": agentShowJd = !!el.checked; render(); break;
       case "run-agent": runAgentAction(); break;
       case "agent-onboard": agentView = "welcome"; agentParsed = null; render(); break;
@@ -2401,7 +2485,13 @@
       case "agent-add-company": addAgentChip("agentCompanyAdd", "companies"); break;
       case "agent-add-city": addAgentChip("agentCityAdd", "cities"); break;
       case "agent-add-direction": addAgentChip("agentDirAdd", "direction"); break;
-      case "agent-starter": agentInput = el.dataset.value; runAgentAction(); break;
+      case "agent-starter": {
+        agentInput = el.dataset.value;
+        render();
+        const starterBox = $("#agentGoal");
+        if (starterBox) starterBox.focus();
+        break;
+      }
       case "agent-confirm-tasks": confirmAgentTasks(); break;
       case "agent-save-job": saveAgentJob(); break;
       case "agent-practice": startMockWith([Number(el.dataset.id)]); break;
@@ -2429,39 +2519,38 @@
       }
       case "finish-mock": finishMock(); break;
       case "solve": {
-        const text = ($("#solverInput") && $("#solverInput").value) || "";
-        if (!text.trim()) { toast("请先粘贴题目"); break; }
+        let text = ($("#solverInput") && $("#solverInput").value) || "";
         const type = ($("#solverType") && $("#solverType").value) || "编程";
         const local = E.solveProblem(text, type);
-        if (canUseAI()) {
-          const box = $("#solverResult");
-          if (box) box.innerHTML = '<div class="empty">' + Icon("sparkles") + "<h3>AI 解析中…</h3><p>正在分析题目，最多等待 40 秒</p></div>";
-          const prompt = [
-            { role: "system", content: "你是资深 AI 产品笔试与面试解析专家。根据题目类型输出：1. 标准答案 2. 答题思路与要点 3. 举例说明；产品题给结构化方案，编程题额外给复杂度与示例代码。直接输出，不要客套。" },
-            { role: "user", content: "题目类型：" + type + "\n题目：" + text }
-          ];
-          E.callAI(prompt, S.profile).then(res => {
-            lastSolve = { matched: false, title: "AI 深度解析", type, approach: res || "AI 解析失败，已回退本地引擎", code: null, complexity: "AI 生成", hint: "", tags: [type] };
-            S.solved.unshift({ title: lastSolve.title, text: text.slice(0, 120), matched: false, time: nowStr() });
-            S.solved = S.solved.slice(0, 20);
-            save();
-            render();
+        const box = $("#solverResult");
+        if (solverImage) {
+          if (!canUseAI()) { toast("图片识别需要 AI 接口，请先粘贴题目文本"); break; }
+          if (box) box.innerHTML = '<div class="empty">' + Icon("sparkles") + "<h3>正在识别题目图片…</h3><p>识别完成后会自动进入 AI 解析</p></div>";
+          E.visionOCR(solverImage, S.profile).then(ocr => {
+            if (!ocr || !ocr.trim()) {
+              toast("图片识别失败，请直接粘贴题目文本");
+              if (box) box.innerHTML = "";
+              return;
+            }
+            text = ocr.trim();
+            solverImage = null;
+            solveText(text, type, E.solveProblem(text, type), box);
           }).catch(() => {
-            lastSolve = { matched: local.matched, title: local.matched ? local.title + "（AI 失败回退）" : "本地解析（AI 失败回退）", type, approach: local.approach, code: local.code, complexity: local.complexity, hint: local.hint, tags: local.tags };
-            S.solved.unshift({ title: local.title, text: text.slice(0, 120), matched: local.matched, time: nowStr() });
-            S.solved = S.solved.slice(0, 20);
-            save();
-            render();
+            toast("图片识别失败，请直接粘贴题目文本");
+            if (box) box.innerHTML = "";
           });
-        } else {
-          lastSolve = { matched: local.matched, title: local.matched ? local.title + "（本地解析）" : "本地解析", type, approach: local.approach, code: local.code, complexity: local.complexity, hint: local.hint, tags: local.tags };
-          S.solved.unshift({ title: local.title, text: text.slice(0, 120), matched: local.matched, time: nowStr() });
-          S.solved = S.solved.slice(0, 20);
-          save();
-          render();
+          break;
         }
+        if (!text.trim()) { toast("请先粘贴题目或上传图片"); break; }
+        solveText(text, type, local, box);
         break;
       }
+      case "toggle-solved": {
+        const box = $("#solvedAnswer-" + id);
+        if (box) box.style.display = box.style.display === "none" ? "block" : "none";
+        break;
+      }
+      case "clear-solver-image": solverImage = null; render(); break;
       case "clear-solved": S.solved = []; lastSolve = null; save(); render(); toast("已清空解题记录"); break;
       case "toggle-fav": {
         const i = S.favorites.indexOf(id);
@@ -2519,10 +2608,10 @@
         let added = 0;
         top.forEach(pair => {
           const title = "复盘专项：" + pair[0].slice(0, 30);
-          if (!existing.has(title)) { S.tasks.unshift({ id: uid(), title, note: "Agent 复盘诊断生成", done: false }); added++; }
+          if (!existing.has(title)) { S.tasks.unshift({ id: uid(), title, note: "复盘诊断生成", done: false }); added++; }
         });
         const t2 = "练习推荐题目（" + diagIds.length + " 题）";
-        if (!existing.has(t2)) { S.tasks.unshift({ id: uid(), title: t2, note: "Agent 复盘诊断生成", done: false }); added++; }
+        if (!existing.has(t2)) { S.tasks.unshift({ id: uid(), title: t2, note: "复盘诊断生成", done: false }); added++; }
         save();
         closeModal();
         render();
@@ -2691,7 +2780,7 @@
   const pill = $("#aiPillText");
   if (pill) pill.textContent = S.profile.aiEnabled && S.profile.apiKey ? "AI 接口已启用" : "本地 AI 在线";
   const av = $(".avatar");
-  if (av) av.textContent = (S.profile.name || "林").slice(0, 1);
+  if (av) av.textContent = ((S.userProfile.basic && S.userProfile.basic.name) || "访").slice(0, 1);
   const tag = $("#buildTag");
   if (tag) tag.textContent = "build " + APP_VERSION;
 
