@@ -2118,14 +2118,14 @@
       <div class="tabs">
         ${[["campus", "校招信息汇总"], ["intern", "实习信息表"], ["state", "国央企信息表"]].map(([k, t]) => '<button class="tab ' + (f.tab === k ? "active" : "") + '" data-action="tab-res" data-value="' + k + '">' + t + "</button>").join("")}
       </div>
-      <div class="note">${Icon("lightbulb")}<span>${resUpdatedAt ? "云端聚合数据（白名单官网抓取 + Feed + 人工导入），最后更新：" + String(resUpdatedAt).slice(0, 16) : (window.OFFERFLOW_BACKEND ? "后端已连接，点击「立即抓取」从白名单官网与 Feed 拉取真实校招信息。" : "单机模式：不内置示例数据；部署后端并配置数据源后才会显示真实抓取信息。")}</span></div>
+      <div class="note">${Icon("lightbulb")}<span>${resUpdatedAt ? "云端聚合数据（白名单官网抓取 + Feed + 人工导入），最后更新：" + String(resUpdatedAt).slice(0, 16) : (window.OFFERFLOW_BACKEND ? "后端已连接，白名单数据源每日自动更新；当前等待首次抓取。" : "单机模式：不内置示例数据；部署后端并配置数据源后每日自动抓取。")}</span></div>
       <div class="card" style="margin-bottom:14px">
         <div class="toolbar">
           <div class="search-box">${Icon("search")}<input id="resSearch" placeholder="搜索公司 / 岗位…" value="${esc(f.q)}"></div>
           <select class="field" id="resCity">${resCityOptions(key)}</select>
           <div class="grow"></div>${badge(title, "b-teal")}
           <span class="badge b-gray" id="resSyncBadge">${resUpdatedAt ? "云端数据 " + resData(key).length + " 条 · " + String(resUpdatedAt).slice(5, 16) : (window.OFFERFLOW_BACKEND ? "等待抓取" : "暂无数据")}</span>
-          <button class="btn btn-sm" data-action="refresh-resources">${Icon("refresh")}立即抓取</button>
+          ${window.OFFERFLOW_BACKEND ? badge("每日自动更新", "b-teal") : ""}
           ${window.OFFERFLOW_BACKEND ? '<button class="btn btn-sm" data-action="import-resources-json">' + Icon("upload") + "导入 JSON</button>" : ""}
         </div>
       </div>
@@ -2423,7 +2423,7 @@
     const p = S.profile;
     const backend = !!window.OFFERFLOW_BACKEND;
     const aiBlock = backend
-      ? '<div class="form-item full" style="flex-direction:row;align-items:center;gap:10px;border:1px solid var(--line-2);border-radius:var(--radius-sm);padding:10px">' + Icon("server") + '<div><div style="font-weight:600">云端 AI 网关</div><div class="hint" style="margin-top:2px">多人版由服务端统一调用豆包，无需在浏览器配置 API Key；服务端配置与用量可在 /api/system/status 查看。</div></div></div>'
+      ? '<div class="form-item full" style="flex-direction:row;align-items:center;gap:10px;border:1px solid var(--line-2);border-radius:var(--radius-sm);padding:10px">' + Icon("server") + '<div><div style="font-weight:600">多人版 AI 服务</div><div class="hint" style="margin-top:2px">AI 由服务端统一调用豆包，浏览器无需配置 API Key；服务端配置与用量见 /api/system/status。</div></div></div>'
       : '<div class="form-item full" style="flex-direction:row;align-items:center;gap:10px;border:1px solid var(--line-2);border-radius:var(--radius-sm);padding:10px">' +
         '<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="setAi" ' + (p.aiEnabled ? "checked" : "") + ' style="accent-color:var(--brand)"> 启用 AI 接口（可选）</label>' +
         '<span class="hint" style="margin-left:auto">未启用时使用内置本地引擎</span></div>' +
@@ -2440,7 +2440,7 @@
         </div>
         ${aiNote}
         <div style="border-top:1px solid var(--line-2);margin-top:16px;padding-top:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-          <div><div style="font-weight:600">数据管理</div><div style="font-size:12px;color:var(--ink-3)">导出完整备份，或从备份文件恢复，支持合并与覆盖</div></div>
+          <div><div style="font-weight:600">数据管理</div><div style="font-size:12px;color:var(--ink-3)">已登录账号的数据会同步到服务端 server/data/users.json；换设备登录同一账号可恢复。导出完整备份，或从备份文件恢复，支持合并与覆盖</div></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <input type="file" id="importBackup" accept="application/json,.json" hidden>
             <button class="btn btn-sm" data-action="export-backup">${Icon("download")}导出备份</button>
@@ -2712,21 +2712,6 @@
       case "tracker-view": filters.tracker.view = el.dataset.value; render(); break;
       case "export-csv": exportCSV(); toast("CSV 已导出"); break;
       case "tab-res": filters.res.tab = el.dataset.value; filters.res.city = "全部"; render(); break;
-      case "refresh-resources": {
-        if (!window.OFFERFLOW_BACKEND) { toast("请通过后端服务访问（当前为纯静态模式）"); break; }
-        fetch("/api/resources/refresh", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", cache: "no-store" })
-          .then(r => r.json())
-          .then(d => {
-            if (d.ok) {
-              toast("已新增 " + d.added + " 条校招信息");
-              loadRemoteResources();
-            } else {
-              toast(d.error || "抓取失败");
-            }
-          })
-          .catch(() => toast("请通过后端服务访问（当前为纯静态模式）"));
-        break;
-      }
       case "import-resources-json": {
         if (!window.OFFERFLOW_BACKEND) { toast("请通过后端服务访问（当前为纯静态模式）"); break; }
         showModal(`

@@ -28,6 +28,7 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   await page.waitForTimeout(300);
   ok('dashboard hero', (await page.textContent('.hero-band h2')).includes('今天也准备充分一点'));
   ok('dashboard no target role', !(await page.textContent('.hero-band')).includes('目标岗位'));
+  ok('settings icon color', await page.$eval('[data-action="open-settings"]', el => getComputedStyle(el).color) === 'rgb(37, 99, 235)');
   ok('guest banner shown', (await page.textContent('#view')).includes('访客演示模式'));
   ok('dashboard no stat cards', await page.locator('.stat-card').count() === 0);
   ok('dashboard full-width cards', await page.locator('#view .card.panel').count() >= 4);
@@ -301,7 +302,8 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     const hrefs = await page.$$eval('#resTable a[target="_blank"]', as => as.map(a => a.href));
     ok('resources no gank links', hrefs.every(h => !h.includes('gankinterview')));
     ok('resources official links exist', hrefs.some(h => h.includes('tencent.com') || h.includes('bytedance.com') || h.includes('huawei.com')));
-    ok('resources refresh button', await page.locator('[data-action="refresh-resources"]').count() === 1);
+    ok('resources auto update badge', await page.locator('.badge', { hasText: '每日自动更新' }).count() === 1);
+    ok('resources no manual refresh', await page.locator('[data-action="refresh-resources"]').count() === 0);
   });
 
   await step('pwa assets', async () => {

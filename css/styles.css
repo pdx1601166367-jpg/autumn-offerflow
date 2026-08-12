@@ -182,6 +182,8 @@ pre {
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--ink); }
 .icon-btn svg { width: 18px; height: 18px; }
+.top-actions .icon-btn[data-action="open-settings"] { color: var(--blue); border-color: #c7d7fb; }
+.top-actions .icon-btn[data-action="open-settings"]:hover { color: var(--sky); background: var(--blue-soft); }
 .menu-btn { display: none; }
 
 .ai-pill {

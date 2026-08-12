@@ -28,7 +28,7 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   await step('backend settings no user key', async () => {
     await page.click('[data-action="open-settings"]');
     const s = await page.textContent('#modalRoot');
-    ok('backend settings shows cloud gateway', s.includes('云端 AI 网关'));
+    ok('backend settings shows cloud gateway', s.includes('多人版 AI 服务') && s.includes('server/data/users.json'));
     ok('backend settings hides personal key', await page.locator('#setKey').count() === 0 && await page.locator('#setPreset').count() === 0);
     await page.click('[data-action="close-modal"]');
   });
