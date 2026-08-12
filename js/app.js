@@ -1775,11 +1775,12 @@
     note.style.marginTop = "8px";
     note.innerHTML = Icon("sparkles") + "<span>正在识别图片文字，最多等待 40 秒…</span>";
     box.appendChild(note);
-    const text = await E.visionOCR(resumeImage, S.profile);
-    if (text === null) {
-      note.innerHTML = Icon("alert-circle") + "<span>识别失败，请检查 AI 接口配置或模型是否支持图片输入。</span>";
+    const result = await E.visionOCR(resumeImage, S.profile);
+    if (!result || !result.text) {
+      note.innerHTML = Icon("alert-circle") + "<span>识别失败：" + esc((result && result.error) || "请检查 AI 接口配置或模型是否支持图片输入") + "</span>";
       return;
     }
+    const text = result.text;
     note.innerHTML = Icon("check-circle") + "<span>识别完成，可应用到简历编辑器。</span>";
     const wrap = document.createElement("div");
     wrap.className = "answer-block";
@@ -2527,16 +2528,17 @@
           if (!canUseAI()) { toast("图片识别需要 AI 接口，请先粘贴题目文本"); break; }
           if (box) box.innerHTML = '<div class="empty">' + Icon("sparkles") + "<h3>正在识别题目图片…</h3><p>识别完成后会自动进入 AI 解析</p></div>";
           E.visionOCR(solverImage, S.profile).then(ocr => {
-            if (!ocr || !ocr.trim()) {
-              toast("图片识别失败，请直接粘贴题目文本");
+            const ocrText = ocr && ocr.text ? ocr.text.trim() : "";
+            if (!ocrText) {
+              toast("图片识别失败：" + ((ocr && ocr.error) || "请直接粘贴题目文本"));
               if (box) box.innerHTML = "";
               return;
             }
-            text = ocr.trim();
+            text = ocrText;
             solverImage = null;
             solveText(text, type, E.solveProblem(text, type), box);
           }).catch(() => {
-            toast("图片识别失败，请直接粘贴题目文本");
+            toast("图片识别失败：网络或服务异常");
             if (box) box.innerHTML = "";
           });
           break;

@@ -28,6 +28,7 @@ const MAX_BODY = 6 * 1024 * 1024;
 const AI_API_KEY = process.env.AI_API_KEY || process.env.ARK_API_KEY || '';
 const AI_BASE_URL = (process.env.AI_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3').replace(/\/+$/, '');
 const AI_MODEL = process.env.AI_MODEL || 'ep-m-20260607002345-lbn6s';
+const AI_VISION_MODEL = process.env.AI_VISION_MODEL || AI_MODEL;
 const AI_DAILY_LIMIT_PER_USER = Number(process.env.AI_DAILY_LIMIT_PER_USER || 60);
 const AI_GUEST_DAILY = Number(process.env.AI_GUEST_DAILY || 10);
 const WHITELIST_URLS = (process.env.WHITELIST_URLS || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -147,16 +148,24 @@ function sanitizeResourceItem(raw) {
   };
 }
 
-async function callAIProxy(messages, maxTokens) {
+async function callAIProxy(messages, maxTokens, model) {
   if (!AI_API_KEY) return { error: '服务端未配置 AI Key（AI_API_KEY）' };
   const res = await fetch(AI_BASE_URL + '/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AI_API_KEY },
-    body: JSON.stringify({ model: AI_MODEL, messages, temperature: 0.6, max_tokens: maxTokens || 900 }),
+    body: JSON.stringify({ model: model || AI_MODEL, messages, temperature: 0.6, max_tokens: maxTokens || 900 }),
     signal: AbortSignal.timeout(60000)
   });
-  if (!res.ok) throw new Error('upstream ' + res.status);
-  const data = await res.json();
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const data = await res.json();
+      if (data && data.error) detail = typeof data.error === 'string' ? data.error : (data.error.message || data.error.code || '');
+      else if (data && data.message) detail = data.message;
+    } catch (e) {}
+    return { error: 'AI 上游 ' + res.status + (detail ? '：' + detail : '') };
+  }
+  const data = await res.json().catch(() => null);
   return { content: data.choices && data.choices[0] ? data.choices[0].message.content : null };
 }
 
@@ -329,11 +338,12 @@ const server = http.createServer(async (req, res) => {
         let text = ext.text || '';
         let warning = '';
         if (ext.image) {
-          const dataUrl = 'data:image/png;base64,' + ext.image.toString('base64');
+          const imageMime = body.mime && body.mime.startsWith('image/') ? body.mime : 'image/png';
+          const dataUrl = 'data:' + imageMime + ';base64,' + ext.image.toString('base64');
           const r = await callAIProxy([
             { role: 'system', content: '你是简历 OCR 助手。把图片中的简历文字完整、按原结构提取出来，保留换行；不要翻译、不要总结、不要评论。' },
             { role: 'user', content: [{ type: 'text', text: '提取这张简历图片中的全部文字：' }, { type: 'image_url', image_url: { url: dataUrl } }] }
-          ], 2000);
+          ], 2000, AI_VISION_MODEL);
           if (r.error) return sendJson(res, 503, { error: r.error });
           text = r.content || '';
           if (!text.trim()) warning = 'OCR 未识别到文字';
@@ -383,7 +393,7 @@ const server = http.createServer(async (req, res) => {
           const r = await callAIProxy([
             { role: 'system', content: '你是通用 OCR 助手。请把图片中的文字完整、按原结构提取出来，保留换行；不要翻译、不要总结、不要添加评论。' },
             { role: 'user', content: [{ type: 'text', text: '提取这张图片中的全部文字：' }, { type: 'image_url', image_url: { url: body.image } }] }
-          ], 2000);
+          ], 2000, AI_VISION_MODEL);
           if (r.error) return sendJson(res, 503, { error: r.error });
           return sendJson(res, 200, { content: r.content });
         } catch (e) {

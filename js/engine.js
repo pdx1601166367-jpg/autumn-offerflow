@@ -238,6 +238,7 @@
   }
 
   async function visionOCR(dataUrl, settings) {
+    const fail = msg => ({ text: null, error: msg || "图片识别失败" });
     if (window.OFFERFLOW_BACKEND) {
       try {
         const token = window.Auth && Auth.token ? Auth.token() : '';
@@ -250,14 +251,14 @@
           cache: "no-store",
           signal: AbortSignal.timeout(60000)
         });
-        if (!res.ok) return null;
-        const d = await res.json();
-        return d.content || null;
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) return fail(d.error || "识别服务返回 " + res.status);
+        return { text: d.content || null, error: "" };
       } catch (e) {
-        return null;
+        return fail("网络或服务异常：" + e.message);
       }
     }
-    if (!settings || !settings.apiKey || !dataUrl) return null;
+    if (!settings || !settings.apiKey || !dataUrl) return fail("未配置 AI 接口");
     const base = (settings.apiBase || "https://api.openai.com/v1").replace(/\/+$/, "");
     const model = settings.model || "gpt-4o-mini";
     try {
@@ -275,11 +276,14 @@
         }),
         signal: AbortSignal.timeout(40000)
       });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.choices && data.choices[0] ? data.choices[0].message.content : null;
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        const detail = data && data.error ? (typeof data.error === "string" ? data.error : (data.error.message || data.error.code || "")) : "";
+        return fail("接口返回 " + res.status + (detail ? "：" + detail : ""));
+      }
+      return { text: data && data.choices && data.choices[0] ? data.choices[0].message.content : null, error: "" };
     } catch (e) {
-      return null;
+      return fail("网络或服务异常：" + e.message);
     }
   }
 
