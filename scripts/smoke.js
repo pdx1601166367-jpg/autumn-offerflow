@@ -101,6 +101,9 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     await page.waitForSelector('#agentDropZone');
     await page.click('[data-action="agent-skip"]');
     ok('agent onboarding skip to home', await page.locator('#agentGoal').count() === 1);
+    await page.click('[data-action="agent-starter"]');
+    await page.waitForTimeout(200);
+    ok('task starter no auto run', (await page.textContent('#agentResultWrap')).includes('还没有执行任务'));
     await page.fill('#agentGoal', '帮我准备阿里 AI 产品经理面试，还有 10 天');
     await page.click('[data-action="run-agent"]');
     await page.waitForSelector('#agentResultWrap');
@@ -113,6 +116,7 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     ok('agent jd full text', t.includes('查看 JD 全文'));
     ok('agent missing jd help', t.includes('未检索到该岗位官方 JD'));
     ok('agent recommended questions', await page.locator('[data-action="agent-practice"]').count() > 0);
+    ok('agent final conclusion points', t.includes('最终结论') && t.includes('1.') && t.includes('5.'));
     await page.click('[data-action="agent-confirm-tasks"]');
     await page.waitForTimeout(300);
     const taskCount = await page.evaluate(() => JSON.parse(localStorage.getItem('offerflow:v1')).tasks.length);
@@ -138,6 +142,15 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     await page.waitForSelector('.tag', { hasText: '已加载图片' });
     await page.click('[data-action="clear-solver-image"]');
     ok('solver image upload clear', await page.locator('.tag', { hasText: '已加载图片' }).count() === 0);
+    await page.evaluate(() => {
+      const dt = new DataTransfer();
+      dt.items.add(new File(['x'], 'pasted.png', { type: 'image/png' }));
+      const ta = document.querySelector('#solverInput');
+      ta.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    });
+    await page.waitForSelector('.tag', { hasText: '已加载图片' });
+    ok('solver image paste', true);
+    await page.click('[data-action="clear-solver-image"]');
   });
 
   await step('resume', async () => {

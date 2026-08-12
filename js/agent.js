@@ -51,7 +51,18 @@
   function localJobSearch(goal, state, remoteItems) {
     const pool = remoteItems && remoteItems.length ? remoteItems : [].concat(D.resources.campus || [], D.resources.intern || [], D.resources.state || []);
     const found = pool.filter(r => goal.company && (r.company.includes(goal.company) || goal.company.includes(r.company)));
-    if (found.length) return found;
+    if (found.length) {
+      return found.map(r => {
+        if (r.jd && r.jd.trim()) return r;
+        const roleText = r.roles || goal.role || "目标岗位";
+        const companyText = r.company || goal.company || "目标企业";
+        return Object.assign({}, r, {
+          jd: "岗位方向：" + roleText + "。\n岗位职责：负责" + roleText + "相关工作的需求分析、方案设计与落地推进，输出可量化结果；与研发、设计、运营等团队协作，持续跟进数据并迭代优化。\n任职要求：具备" + roleText + "相关基础和学习能力，逻辑清晰，沟通协作好，抗压能力强；未收录官方 JD，具体任职要求请以" + companyText + "官网招聘页为准，或粘贴完整 JD 文本。",
+          jdSource: "generic",
+          note: (r.note ? r.note + "；未收录官方 JD，已生成能力参考" : "未收录官方 JD，已生成能力参考") + "；粘贴 JD 文本或岗位链接可提升分析准确度"
+        });
+      });
+    }
     const roleText = goal.role || "目标岗位";
     const companyText = goal.company || "目标企业";
     return [{

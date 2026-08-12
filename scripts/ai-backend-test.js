@@ -68,6 +68,11 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
       return up && up.complete && up.goals.roles.includes('AI 产品经理') && up.goals.stage === '准备秋招';
     });
     ok('user profile created', profileOk === true);
+    await page.click('[data-action="agent-onboard"]');
+    await page.waitForFunction(() => document.body.innerText.includes('先让我了解你'), null, { timeout: 15000 });
+    ok('agent onboard edit clickable', true);
+    await page.click('[data-action="agent-skip"]');
+    await page.waitForFunction(() => document.body.innerText.includes('求职画像'), null, { timeout: 15000 });
     await page.fill('#agentGoal', '帮我分析云端检索公司 AI 产品经理岗位适不适合');
     await page.click('[data-action="run-agent"]');
     await page.waitForFunction(() => {
