@@ -164,12 +164,12 @@
 
   function badge(text, color) { return '<span class="badge ' + (color || "b-gray") + '">' + esc(text) + "</span>"; }
   function ringHtml(score) {
-    const c = score >= 85 ? "#15803d" : score >= 70 ? "#0e9488" : score >= 55 ? "#d97706" : "#dc2626";
+    const c = score >= 85 ? "#2563eb" : score >= 70 ? "#0891b2" : score >= 55 ? "#d97706" : "#dc2626";
     return `<div class="ring" style="--val:${score};background:conic-gradient(${c} calc(${score}*1%), var(--gray-soft) 0)"><div><b style="color:${c}">${score}</b><span>综合得分</span></div></div>`;
   }
   function dimsHtml(dims) {
     return Object.entries(dims || {}).map(([k, v]) =>
-      '<div class="dim-row"><span>' + esc(k) + '</span><div class="progress"><i style="width:' + v + '%"></i></div><b>' + v + "</b></div>"
+      '<div class="dim-row"><span>' + esc(k) + '</span><div class="progress"><i style="width:' + v + '%;background:var(--blue)"></i></div><b>' + v + "</b></div>"
     ).join("");
   }
   function fmtTime(s) {
@@ -451,7 +451,6 @@
   function pageDashboard() {
     const apps = S.apps;
     const upName = (S.userProfile.basic && S.userProfile.basic.name) || "同学";
-    const upRole = (S.userProfile.goals && S.userProfile.goals.roles && S.userProfile.goals.roles[0]) || "未设置";
     const active = apps.filter(a => ["已投递", "笔试", "面试"].includes(a.status)).length;
     const offers = apps.filter(a => a.status === "Offer").length;
     const avg = S.reviews.length ? Math.round(S.reviews.reduce((s, r) => s + r.score, 0) / S.reviews.length) : 0;
@@ -485,7 +484,7 @@
       <div class="hero-band">
         <div class="grow">
           <h2>${esc(upName)}，今天也准备充分一点。</h2>
-          <p>目标岗位 ${esc(upRole)} · ${today()} · 距离秋招黄金期还有 ${Math.max(0, Math.round((new Date(new Date().getFullYear(), 8, 1) - new Date()) / 864e5))} 天</p>
+          <p>${today()} · 距离秋招黄金期还有 ${Math.max(0, Math.round((new Date(new Date().getFullYear(), 8, 1) - new Date()) / 864e5))} 天</p>
         </div>
         <div class="hero-score"><b>${prep}</b><span>准备指数</span></div>
       </div>
@@ -529,7 +528,7 @@
           <div class="grid grid-2">
             <div>
               ${cats.map(c => {
-                const color = c.score >= 75 ? "var(--green)" : c.score >= 60 ? "var(--amber)" : "var(--red)";
+                const color = c.score >= 75 ? "var(--blue)" : c.score >= 60 ? "var(--sky)" : "var(--red)";
                 return '<div class="dim-row"><span>' + esc(c.cat) + "（" + c.count + "次）</span><div class=\"progress\"><i style=\"width:" + c.score + "%;background:" + color + "\"></i></div><b>" + c.score + "</b></div>";
               }).join("")}
             </div>
@@ -1637,7 +1636,8 @@
       <div class="split">
         <div class="side-stack">
           <div class="card panel">
-            <div class="panel-head"><div><h2>简历内容</h2><div class="sub">支持手动粘贴，数据仅保存在本地</div></div>${badge("AI 评分", "b-teal")}</div>
+            <div class="panel-head"><div><h2>简历内容</h2><div class="sub">支持手动粘贴，数据仅保存在本地</div></div>
+              <div style="display:flex;gap:8px;align-items:center">${badge("AI 评分", "b-teal")}<button class="btn btn-sm" data-action="show-resume-versions">${Icon("history")}版本</button></div></div>
             <div class="form-grid">
               <div class="form-item full"><label>简历文本</label>
                 <textarea id="resumeText" rows="14" placeholder="姓名、教育背景、技能、项目经历、实习经历…">${latest ? esc(latest.text) : ""}</textarea></div>
@@ -1660,13 +1660,12 @@
               <button class="btn" data-action="resume-agent">${Icon("zap")}Agent 简历优化</button>
               <button class="btn btn-ghost" data-action="load-sample">${Icon("refresh")}载入示例</button>
             </div>
-            <div id="resumeResult" style="margin-top:14px"></div>
           </div>
         </div>
         <div class="card panel">
-          <div class="panel-head"><div><h2>版本记录</h2><div class="sub">保存过的简历版本</div></div></div>
-          <div id="versionList">
-            ${S.resumes.length ? S.resumes.map((r, i) => `<div class="list-row"><div class="grow"><h4>${esc(r.name)}</h4><p>${esc(r.savedAt)} · ${r.text.length} 字</p></div><button class="btn btn-sm" data-action="load-version" data-id="${r.id}">${Icon("rotate")}载入</button></div>`).join("") : '<div class="empty">' + Icon("file") + "<h3>暂无版本</h3><p>保存后会出现在这里</p></div>"}
+          <div class="panel-head"><div><h2>分析结果</h2><div class="sub">诊断、AI 改写、深度匹配等结果都在这里</div></div>${badge("实时生成", "b-blue")}</div>
+          <div id="resumeResult">
+            <div class="empty">${Icon("file")}<h3>暂无分析结果</h3><p>在左侧填写简历后，点击诊断、AI 改写或深度匹配</p></div>
           </div>
           <div class="answer-block" style="margin-top:12px">
             <h4>评分维度说明</h4>
@@ -1674,6 +1673,15 @@
           </div>
         </div>
       </div>`;
+  }
+
+  function showResumeVersions() {
+    showModal(`
+      <div class="modal-head"><h3>简历版本</h3><button class="icon-btn" data-action="close-modal">${Icon("x")}</button></div>
+      <div class="modal-body">
+        ${S.resumes.length ? S.resumes.map(r => `<div class="list-row"><div class="grow"><h4>${esc(r.name)}</h4><p>${esc(r.savedAt)} · ${r.text.length} 字</p></div><button class="btn btn-sm" data-action="load-version" data-id="${r.id}">${Icon("rotate")}载入</button></div>`).join("") : '<div class="empty">' + Icon("file") + "<h3>暂无版本</h3><p>保存后会出现在这里</p></div>"}
+      </div>
+      <div class="modal-foot"><button class="btn" data-action="close-modal">关闭</button></div>`);
   }
 
   function diagnoseResume() {
@@ -2657,9 +2665,11 @@
         const r = S.resumes.find(x => x.id === id);
         const ta = $("#resumeText");
         if (ta && r) ta.value = r.text;
+        closeModal();
         toast("已载入版本");
         break;
       }
+      case "show-resume-versions": showResumeVersions(); break;
       case "open-task-modal": taskEditId = null; taskModal(null); break;
       case "edit-task": taskEditId = id; taskModal(S.tasks.find(x => x.id === id)); break;
       case "save-task": saveTask(); break;
