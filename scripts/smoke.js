@@ -29,6 +29,9 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   ok('dashboard hero', (await page.textContent('.hero-band h2')).includes('今天也准备充分一点'));
   ok('dashboard no target role', !(await page.textContent('.hero-band')).includes('目标岗位'));
   ok('settings icon color', await page.$eval('[data-action="open-settings"]', el => getComputedStyle(el).color) === 'rgb(74, 152, 217)');
+  ok('settings icon rendered', await page.locator('[data-action="open-settings"] svg').count() === 1);
+  ok('brand logo rendered', await page.locator('.brand-mark svg').count() === 1);
+  ok('brand tag no wrap', await page.$eval('.brand-tag', el => el.scrollWidth <= el.clientWidth + 1));
   ok('guest banner shown', (await page.textContent('#view')).includes('访客演示模式'));
   ok('dashboard no stat cards', await page.locator('.stat-card').count() === 0);
   ok('dashboard full-width cards', await page.locator('#view .card.panel').count() >= 4);
@@ -160,6 +163,7 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     await page.waitForSelector('#solverResult .answer-block');
     const t = await page.textContent('#solverResult');
     ok('solver matched', t.includes('两数之和') && t.includes('复杂度'));
+    ok('solver markdown rendered', await page.locator('#solverResult .md-body').count() > 0);
     await page.waitForSelector('[data-action="toggle-solved"]');
     await page.click('[data-action="toggle-solved"]');
     ok('solved answer view', await page.locator('#solvedList .answer-block').first().isVisible());
@@ -255,19 +259,11 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     ok('whiteboard only product', rendered === n, rendered + ' / ' + n);
   });
 
-  await step('self-test', async () => {
+  await step('self-test removed', async () => {
+    await goto(BASE + '/');
+    ok('self-test nav removed', await page.locator('.nav-item[data-id="self-test"]').count() === 0);
     await goto(BASE + '/#/self-test');
-    ok('salary calculator removed', !(await page.textContent('#view')).includes('薪资期望计算'));
-    await page.click('[data-action="start-test"]');
-    await page.waitForSelector('input[type=radio]');
-    await page.evaluate(() => {
-      document.querySelectorAll('input[type=radio]').forEach((r, i) => {
-        if (i % 4 === 0) r.checked = true;
-      });
-    });
-    await page.click('[data-action="submit-test"]');
-    await page.waitForSelector('h2', { hasText: '行动清单' });
-    ok('self-test result', true);
+    ok('self-test route fallback', (await page.textContent('#crumb')).includes('工作台'));
   });
 
   await step('reviews seed', async () => {

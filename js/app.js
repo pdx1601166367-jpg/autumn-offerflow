@@ -143,8 +143,7 @@
     { id: "resume", label: "简历优化", icon: "file" },
     { id: "tracker", label: "投递管理", icon: "kanban" },
     { id: "resources", label: "求职资料", icon: "database" },
-    { id: "reviews", label: "复盘报告", icon: "clipboard" },
-    { id: "self-test", label: "自测工具", icon: "gauge" }
+    { id: "reviews", label: "复盘报告", icon: "clipboard" }
   ];
   const TITLES = {
     dashboard: ["工作台", "求职进度与今日任务总览"],
@@ -155,8 +154,7 @@
     resume: ["AI 简历优化", "粘贴简历与 JD，获取维度评分和改写建议"],
     tracker: ["投递管理", "用表格或看板管理每一次投递"],
     resources: ["求职资料", "校招、实习与国央企信息速查"],
-    reviews: ["复盘报告", "回顾每一场模拟面试的表现与改进点"],
-    "self-test": ["自测工具", "面试准备度自测与薪资期望计算"]
+    reviews: ["复盘报告", "回顾每一场模拟面试的表现与改进点"]
   };
 
   const STATUS_COLOR = { 意向: "b-blue", 已投递: "b-sky", 笔试: "b-amber", 面试: "b-red", Offer: "b-green", 拒绝: "b-gray" };
@@ -444,8 +442,7 @@
     resume: pageResume,
     tracker: pageTracker,
     resources: pageResources,
-    reviews: pageReviews,
-    "self-test": pageSelfTest
+    reviews: pageReviews
   };
 
   function pageDashboard() {
@@ -1535,15 +1532,65 @@
   }
 
   function solverResultHtml(r) {
+    const md = mdToHtml(r.approach);
     return `
       <div class="answer-block" style="margin-top:0">
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${badge(r.matched ? "命中题型" : "通用框架", r.matched ? "b-green" : "b-gray")}${badge(r.title, "b-blue")}${(r.tags || []).map(t => '<span class="tag">' + esc(t) + "</span>").join("")}</div>
         <h4>解题思路</h4>
-        <div style="white-space:pre-line;line-height:1.7;font-size:13px;color:var(--ink-2)">${esc(r.approach)}</div>
+        <div class="md-body" style="line-height:1.7;font-size:13px;color:var(--ink-2)">${md}</div>
         ${r.code ? "<h4 style='margin-top:12px'>示例代码</h4><pre>" + esc(r.code) + "</pre>" : ""}
         <h4 style="margin-top:10px">复杂度</h4>
         <div style="font-size:13px;color:var(--ink-2)">${esc(r.complexity)}</div>
       </div>`;
+  }
+
+  function mdToHtml(text) {
+    const lines = String(text || "").split(/\r?\n/);
+    let html = "";
+    let inUl = false, inOl = false, inPre = false;
+    const preBuf = [];
+    const closeLists = () => {
+      if (inUl) { html += "</ul>"; inUl = false; }
+      if (inOl) { html += "</ol>"; inOl = false; }
+    };
+    for (const raw of lines) {
+      if (/^\s*```/.test(raw)) {
+        closeLists();
+        if (inPre) {
+          html += "<pre>" + esc(preBuf.join("\n")) + "</pre>";
+          preBuf.length = 0;
+          inPre = false;
+        } else {
+          inPre = true;
+        }
+        continue;
+      }
+      if (inPre) { preBuf.push(raw); continue; }
+      let l = esc(raw);
+      l = l.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>");
+      const h = l.match(/^(#{1,4})\s+(.*)/);
+      if (h) {
+        closeLists();
+        const level = Math.min(4, h[1].length);
+        html += "<h" + level + ">" + h[2] + "</h" + level + ">";
+        continue;
+      }
+      if (/^\s*[-*]\s+/.test(raw)) {
+        if (!inUl) { closeLists(); html += "<ul>"; inUl = true; }
+        html += "<li>" + l.replace(/^\s*[-*]\s+/, "") + "</li>";
+        continue;
+      }
+      if (/^\s*\d+[.、]\s+/.test(raw)) {
+        if (!inOl) { closeLists(); html += "<ol>"; inOl = true; }
+        html += "<li>" + l.replace(/^\s*\d+[.、]\s+/, "") + "</li>";
+        continue;
+      }
+      closeLists();
+      html += l.trim() ? "<p>" + l + "</p>" : "";
+    }
+    closeLists();
+    if (inPre) html += "<pre>" + esc(preBuf.join("\n")) + "</pre>";
+    return html;
   }
 
   function pageBank() {
@@ -2795,6 +2842,11 @@
   if (av) av.textContent = ((S.userProfile.basic && S.userProfile.basic.name) || "访").slice(0, 1);
   const tag = $("#buildTag");
   if (tag) tag.textContent = "build " + APP_VERSION;
+
+  document.querySelectorAll("[data-icon]").forEach(el => {
+    const name = el.dataset.icon;
+    if (name && Icon.has(name)) el.innerHTML = Icon(name);
+  });
 
   window.__onAuthChange = function () {
     render();
