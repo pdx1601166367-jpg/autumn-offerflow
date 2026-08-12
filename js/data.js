@@ -349,44 +349,10 @@
   const ALL_QUESTIONS = Q.concat(EXTRA_QUESTIONS);
 
   const RESOURCES = {
-    campus: [
-      { id: "c1", company: "微纳核芯", batch: "秋招", date: "2026-08-07", roles: "存算一体(CIM)、SRAM/DRAM 设计、AI 芯片架构、NPU/SoC 设计、编译器、AI 算法、大模型推理可靠性", cities: "杭州 上海 北京 深圳 苏州", note: "芯片设计为主，岗位类别多；官网待补充", link: "" },
-      { id: "c2", company: "航天控制", batch: "秋招提前批", date: "2026-08", roles: "控制类、电子类、软件类、机械类、管理类", cities: "贵州贵阳", note: "军工航天方向；官网待补充", link: "" },
-      { id: "c3", company: "英飞凌", batch: "秋招", date: "2026-08", roles: "Staff FAE、合作伙伴管理、国际管培生", cities: "上海 无锡 宁波 深圳 西安", note: "外企半导体", link: "https://careers.infineon.com" },
-      { id: "c4", company: "迈塔兰斯", batch: "秋招", date: "2026-08", roles: "光子计算、超表面设计、光学设计/结构/工艺、材料制备、产品研发", cities: "深圳 湖州", note: "光学与光子计算", link: "https://www.meta-lens.com" },
-      { id: "c5", company: "基康技术", batch: "秋招", date: "2026-08", roles: "水利水电、桥隧、机械、嵌入式、销售工程师", cities: "北京 武汉 成都 西安 广州", note: "工程检测技术；官网待补充", link: "" },
-      { id: "c6", company: "瀚亚投资", batch: "实习", date: "2026-08", roles: "分销部实习生", cities: "上海", note: "金融资管", link: "https://www.eastspring.com.cn" },
-      { id: "c7", company: "思格新能源", batch: "秋招", date: "2026-08", roles: "技术研发、职能支持、智能制造、供应链、销售与服务、市场营销", cities: "上海 南通 珠海", note: "新能源方向", link: "https://www.sigenergy.com" },
-      { id: "c8", company: "腾讯", batch: "秋招", date: "2026-08", roles: "技术、产品、设计、职能类", cities: "深圳 北京 上海 成都", note: "演示数据", link: "https://careers.tencent.com" },
-      { id: "c9", company: "字节跳动", batch: "秋招提前批", date: "2026-08", roles: "研发、算法、产品", cities: "北京 上海 杭州", note: "演示数据", link: "https://jobs.bytedance.com" },
-      { id: "c10", company: "华为", batch: "秋招", date: "2026-08", roles: "研发、销售、供应链", cities: "深圳 东莞 南京", note: "演示数据", link: "https://career.huawei.com" },
-      { id: "c11", company: "美团", batch: "秋招", date: "2026-08", roles: "技术、产品、运营", cities: "北京 上海", note: "演示数据", link: "https://zhaopin.meituan.com" },
-      { id: "c12", company: "小米", batch: "秋招", date: "2026-08", roles: "软硬件研发、运营", cities: "北京 南京 武汉", note: "演示数据", link: "https://hr.xiaomi.com" }
-    ],
-    intern: [
-      { id: "i1", company: "瀚亚投资", role: "分销部实习生", cities: "上海", date: "2026-08", tags: "金融", link: "https://www.eastspring.com.cn" },
-      { id: "i2", company: "湖南省第十五届运动会开幕式", role: "制片后勤组、演员管理组、现场执行组", cities: "湖南益阳", date: "2026-08", tags: "大型活动", link: "" },
-      { id: "i3", company: "腾讯", role: "产品运营实习生", cities: "深圳", date: "2026-08", tags: "互联网", link: "https://careers.tencent.com" },
-      { id: "i4", company: "字节跳动", role: "前端开发实习生", cities: "北京", date: "2026-08", tags: "互联网", link: "https://jobs.bytedance.com" },
-      { id: "i5", company: "蚂蚁集团", role: "算法实习生", cities: "杭州", date: "2026-08", tags: "金融科技", link: "https://talent.antgroup.com" },
-      { id: "i6", company: "蔚来", role: "车辆工程实习生", cities: "上海", date: "2026-08", tags: "新能源", link: "https://nio.jobs.feishu.cn" },
-      { id: "i7", company: "网易", role: "数据分析实习生", cities: "北京", date: "2026-08", tags: "互联网", link: "https://hr.163.com" },
-      { id: "i8", company: "小红书", role: "内容运营实习生", cities: "上海", date: "2026-08", tags: "互联网", link: "https://job.xiaohongshu.com" }
-    ],
-    state: [
-      { id: "s1", company: "国家电网", batch: "一批次", date: "2026-11", roles: "电工类、计算机类、财会类", cities: "全国", link: "https://zhaopin.sgcc.com.cn" },
-      { id: "s2", company: "中国移动", batch: "秋招", date: "2026-10", roles: "通信、技术、市场类", cities: "全国", link: "https://job.10086.cn" },
-      { id: "s3", company: "中国银行", batch: "秋招", date: "2026-09", roles: "金融科技、综合类", cities: "全国", link: "https://www.boc.cn" },
-      { id: "s4", company: "中国船舶集团", batch: "校招", date: "2026-10", roles: "船舶、机械、电气类", cities: "上海 大连", link: "https://www.cssc.net.cn" },
-      { id: "s5", company: "中石化", batch: "秋招", date: "2026-10", roles: "石油化工、信息化类", cities: "全国", link: "https://job.sinopec.com" },
-      { id: "s6", company: "中国电信", batch: "秋招", date: "2026-09", roles: "云计算、大数据、研发类", cities: "全国", link: "https://job.chinatelecom.com.cn" },
-      { id: "s7", company: "中国烟草", batch: "招聘", date: "2026-11", roles: "综合、技术类", cities: "各省", link: "https://www.tobacco.gov.cn" },
-      { id: "s8", company: "航天科技集团", batch: "秋招", date: "2026-09", roles: "航天、电子、软件类", cities: "北京 上海 西安", link: "https://www.spacechina.com" }
-    ]
+    campus: [],
+    intern: [],
+    state: []
   };
-
-  const genericJd = (roles, company) => "岗位方向：" + roles + "。\n岗位职责：负责" + roles + "相关工作的需求分析、方案设计与落地推进，输出可量化结果；与研发、设计、运营等团队协作，持续跟进数据并迭代优化。\n任职要求：具备" + roles + "相关基础和学习能力，逻辑清晰，沟通协作好，抗压能力强；具体 JD 与投递方式请以" + (company || "目标企业") + "官方招聘页面为准。";
-  Object.keys(RESOURCES).forEach(k => RESOURCES[k].forEach(r => { if (!r.jd) r.jd = genericJd(r.roles || r.role || r.company, r.company); }));
 
   const SOLVER_DB = [
     {

@@ -476,6 +476,7 @@
     const nextInterview = apps.find(a => a.status === "面试") || null;
     const upcoming = apps.filter(a => a.interviewAt && new Date(a.interviewAt) > new Date()).sort((a, b) => new Date(a.interviewAt) - new Date(b.interviewAt)).slice(0, 6);
     const wk = weekStats();
+    const campusTop = resData("campus").slice(0, 3);
     return `
       <div class="hero-band">
         <div class="grow">
@@ -591,8 +592,8 @@
       <div class="card panel">
         <div class="panel-head"><div><h2>校招速览</h2><div class="sub">最新汇总信息</div></div>
           <button class="btn btn-sm" data-action="navigate" data-id="resources">${Icon("arrow-right")}更多</button></div>
-        ${D.resources.campus.slice(0, 3).map(r => `
-          <div class="list-row"><div class="grow"><h4>${esc(r.company)}</h4><p>${esc(r.batch)} · ${esc(r.cities)}</p></div>${badge(r.batch, r.batch.includes("提前") ? "b-red" : "b-teal")}</div>`).join("")}
+        ${campusTop.length ? campusTop.map(r => `
+          <div class="list-row"><div class="grow"><h4>${esc(r.company)}</h4><p>${esc(r.batch)} · ${esc(r.cities)}</p></div>${badge(r.batch, r.batch.includes("提前") ? "b-red" : "b-teal")}</div>`).join("") : '<div class="empty">' + Icon("database") + "<h3>暂无真实数据</h3><p>部署后端并配置数据源后自动抓取</p></div>"}
       </div>`;
   }
 
@@ -2105,13 +2106,13 @@
       <div class="tabs">
         ${[["campus", "校招信息汇总"], ["intern", "实习信息表"], ["state", "国央企信息表"]].map(([k, t]) => '<button class="tab ' + (f.tab === k ? "active" : "") + '" data-action="tab-res" data-value="' + k + '">' + t + "</button>").join("")}
       </div>
-      <div class="note">${Icon("lightbulb")}<span>${resUpdatedAt ? "云端聚合数据（白名单官网抓取 + Feed + 人工导入），最后更新：" + String(resUpdatedAt).slice(0, 16) : (window.OFFERFLOW_BACKEND ? "后端已连接，点击「立即抓取」从白名单官网与 Feed 拉取真实校招信息。" : "单机模式：内置演示数据；部署后端后可配置数据源每日自动抓取。")}</span></div>
+      <div class="note">${Icon("lightbulb")}<span>${resUpdatedAt ? "云端聚合数据（白名单官网抓取 + Feed + 人工导入），最后更新：" + String(resUpdatedAt).slice(0, 16) : (window.OFFERFLOW_BACKEND ? "后端已连接，点击「立即抓取」从白名单官网与 Feed 拉取真实校招信息。" : "单机模式：不内置示例数据；部署后端并配置数据源后才会显示真实抓取信息。")}</span></div>
       <div class="card" style="margin-bottom:14px">
         <div class="toolbar">
           <div class="search-box">${Icon("search")}<input id="resSearch" placeholder="搜索公司 / 岗位…" value="${esc(f.q)}"></div>
           <select class="field" id="resCity">${resCityOptions(key)}</select>
           <div class="grow"></div>${badge(title, "b-teal")}
-          <span class="badge b-gray" id="resSyncBadge">${resUpdatedAt ? "云端数据 " + resData(key).length + " 条 · " + String(resUpdatedAt).slice(5, 16) : "内置演示数据"}</span>
+          <span class="badge b-gray" id="resSyncBadge">${resUpdatedAt ? "云端数据 " + resData(key).length + " 条 · " + String(resUpdatedAt).slice(5, 16) : (window.OFFERFLOW_BACKEND ? "等待抓取" : "暂无数据")}</span>
           <button class="btn btn-sm" data-action="refresh-resources">${Icon("refresh")}立即抓取</button>
           ${window.OFFERFLOW_BACKEND ? '<button class="btn btn-sm" data-action="import-resources-json">' + Icon("upload") + "导入 JSON</button>" : ""}
         </div>
@@ -2160,22 +2161,32 @@
     const f = filters.res;
     const key = f.tab;
     const list = resData(key).filter(r => {
-      if (f.q && !((r.company + r.roles + r.cities + r.note).toLowerCase().includes(f.q.toLowerCase()))) return false;
+      if (f.q && !((r.company + r.roles + r.cities + r.note + (r.source || "")).toLowerCase().includes(f.q.toLowerCase()))) return false;
       if (f.city !== "全部" && !String(r.cities).split(/[\s,，\/]+/).includes(f.city)) return false;
       return true;
     });
-    if (!list.length) { box.innerHTML = '<div class="empty">' + Icon("database") + "<h3>没有匹配记录</h3><p>换个关键词试试</p></div>"; return; }
+    if (!list.length) {
+      const hasAny = resData(key).length > 0;
+      box.innerHTML = '<div class="empty">' + Icon("database") + "<h3>" + (hasAny ? "没有匹配记录" : "暂无真实数据") + "</h3><p>" + (hasAny ? "换个关键词试试" : (window.OFFERFLOW_BACKEND ? "点击右上角「立即抓取」或导入 JSON" : "请部署后端并配置数据源")) + "</p></div>";
+      return;
+    }
     const cols = key === "intern"
-      ? ["公司", "岗位 / 组别", "城市", "更新时间", "类型", "投递链接", ""]
-      : ["公司", "批次", "更新时间", "岗位方向", "城市", "备注", "投递链接", ""];
+      ? ["公司", "岗位 / 组别", "城市", "更新时间", "类型", "信息来源", "投递链接", ""]
+      : ["公司", "批次", "更新时间", "岗位方向", "城市", "备注", "信息来源", "投递链接", ""];
     const linkCell = r => r.link ? '<a href="' + esc(r.link) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px">' + Icon("link", 14) + "投递</a>" : '<span class="cell-sub">—</span>';
+    const sourceCell = r => {
+      const src = r.source || r.sourceUrl || "";
+      if (!src) return '<span class="cell-sub">—</span>';
+      const label = src.replace(/^https?:\/\//, "").replace(/\/+$/, "").slice(0, 42);
+      return '<a href="' + esc(src) + '" target="_blank" rel="noopener" title="' + esc(src) + '" style="display:inline-flex;align-items:center;gap:5px;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + Icon("link", 14) + '<span class="cell-sub">' + esc(label) + "</span></a>";
+    };
     const row = key === "intern" ? (r => `
       <td><div class="cell-main">${esc(r.company)}</div></td><td>${esc(r.role)}</td><td>${esc(r.cities)}</td><td>${esc(r.date)}</td><td>${badge(r.tags || "实习", "b-sky")}</td>
-      <td>${linkCell(r)}</td>
+      <td>${sourceCell(r)}</td><td>${linkCell(r)}</td>
       <td><button class="btn btn-sm" data-action="apply-resource" data-company="${esc(r.company)}" data-role="${esc(r.role || r.batch)}" data-city="${esc(r.cities.split(/[\s,，\/]+/)[0])}" data-link="${esc(r.link || "")}">${Icon("plus")}加入投递</button></td>`)
       : (r => `
       <td><div class="cell-main">${esc(r.company)}</div></td><td>${badge(r.batch, r.batch.includes("提前") ? "b-red" : "b-teal")}</td><td>${esc(r.date)}</td><td style="max-width:260px"><span class="cell-sub">${esc(r.roles)}</span></td><td>${esc(r.cities)}</td><td><span class="cell-sub">${esc(r.note || "—")}</span></td>
-      <td>${linkCell(r)}</td>
+      <td>${sourceCell(r)}</td><td>${linkCell(r)}</td>
       <td><button class="btn btn-sm" data-action="apply-resource" data-company="${esc(r.company)}" data-role="${esc(r.batch)}" data-city="${esc(r.cities.split(/[\s,，\/]+/)[0])}" data-link="${esc(r.link || "")}">${Icon("plus")}加入投递</button></td>`);
     box.innerHTML = `<table><thead><tr>${cols.map(c => "<th>" + c + "</th>").join("")}</tr></thead><tbody>${list.map(r => "<tr>" + row(r) + "</tr>").join("")}</tbody></table>`;
   }

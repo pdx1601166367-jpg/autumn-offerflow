@@ -143,6 +143,7 @@ function sanitizeResourceItem(raw) {
     roles: String(raw.roles || '').trim(),
     cities: String(raw.cities || '').trim(),
     link: String(raw.link || '').trim(),
+    source: String(raw.source || raw.sourceUrl || raw.link || '').trim().slice(0, 1000),
     jd: String(raw.jd || '').slice(0, 3000),
     note: String(raw.note || '').trim()
   };
@@ -171,8 +172,9 @@ async function callAIProxy(messages, maxTokens, model) {
 
 async function refreshResources(feedUrl, entries) {
   let added = 0;
-  const merge = raw => {
-    const item = sanitizeResourceItem(raw);
+  const merge = (raw, sourceFallback) => {
+    const withSource = Object.assign({}, raw, (raw.source || raw.sourceUrl) ? {} : { source: sourceFallback || '' });
+    const item = sanitizeResourceItem(withSource);
     if (!item.company) return;
     const dup = resources.items.some(x => x.type === item.type && x.company === item.company && x.batch === item.batch);
     if (dup) return;
@@ -184,12 +186,12 @@ async function refreshResources(feedUrl, entries) {
     if (!res.ok) throw new Error('feed fetch failed');
     const data = await res.json();
     const incoming = Array.isArray(data) ? data : (data.items || []);
-    incoming.forEach(merge);
+    incoming.forEach(x => merge(x, feedUrl));
   }
   const list = Array.isArray(entries) ? entries : [];
   for (const e of list) {
     const scraped = await scrapeWhitelist(e.url, { company: e.company, render: !!e.render, timeoutMs: 30000 });
-    scraped.forEach(merge);
+    scraped.forEach(x => merge(x, e.url));
   }
   if (feedUrl || list.length) resources.updatedAt = new Date().toISOString();
   saveResources();

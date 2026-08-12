@@ -70,6 +70,7 @@ function fromJsonLd(html, sourceUrl) {
           roles: node.title || '',
           cities: String(loc),
           link: node.url || sourceUrl,
+          source: sourceUrl,
           jd: desc || genericJd(node.title || '', org),
           note: 'JSON-LD 白名单抓取'
         });
@@ -106,6 +107,7 @@ function fromLinks(html, sourceUrl, company) {
       roles: text.slice(0, 120),
       cities: '',
       link,
+      source: sourceUrl,
       jd: genericJd(text.slice(0, 120), company || new URL(sourceUrl).hostname.replace(/^www\./, '')),
       note: '白名单链接抓取'
     });

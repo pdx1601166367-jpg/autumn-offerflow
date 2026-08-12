@@ -251,7 +251,11 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   });
 
   await step('resources link column', async () => {
-    await goto(BASE + '/#/resources');
+    await goto('http://127.0.0.1:8125/#/resources');
+    await page.waitForSelector('#resSyncBadge');
+    await page.waitForFunction(() => document.querySelector('#resSyncBadge').textContent.includes('云端数据'), null, { timeout: 10000 });
+    ok('resources source header', (await page.textContent('#resTable')).includes('信息来源'));
+    ok('resources source anchor', await page.locator('#resTable a[title^="http"]').count() > 0);
     ok('resources link header', (await page.textContent('#resTable')).includes('投递链接'));
     ok('resources link anchor', await page.locator('#resTable a[target="_blank"]').count() > 0);
     const hrefs = await page.$$eval('#resTable a[target="_blank"]', as => as.map(a => a.href));
