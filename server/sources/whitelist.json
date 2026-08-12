@@ -9,12 +9,255 @@
     "company": "腾讯",
     "url": "https://careers.tencent.com/zh-cn/jobopportunity.html",
     "render": true,
-    "note": "JS 渲染，需 Playwright（本地已验证可安装）"
+    "note": "JS 渲染，需 Playwright"
   },
   {
     "company": "字节跳动",
     "url": "https://jobs.bytedance.com/experienced/position/list",
     "render": true,
     "note": "JS 渲染，需 Playwright"
+  },
+  {
+    "company": "美团",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786516990&ver=6899&signature=7X-dZeNSROtlqs7qjjsqfE7VeGoyRDjj4lOUrO4i0K8*ipRAq9xUhMKtBoYKl*dk3h6ejkpRVa11IXb2RLa8VPlw-*lNaaphdlSB1I6Uv3*6CHILn4*Fh6bAYxqc3eQa&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "【美团】2026届春招启动!转正实习+应届校招!六险一金+房补餐补!",
+    "account": "刺猬实习校招",
+    "note": "公众号文章"
+  },
+  {
+    "company": "阿里巴巴",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786516995&ver=6899&signature=7Sx6gNOzG*5lzZ*klU*PhQo7TLglKoQtfF92-55k6E4sve9iMhZJYP-uHGfz8bLQlFRjVxGRvyeYhb4GrKeJtToVGrqcQ-3NhTD1x8uegk0bgeSuIsW*uQLeqgilW4*x&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "校招|阿里巴巴2026校园招聘持续进行中",
+    "account": "TogoCareer途鸽求职",
+    "note": "公众号文章"
+  },
+  {
+    "company": "字节跳动",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517000&ver=6899&signature=tJh7BnwIf3b5HCs7NWb8cd8nTvQGs53MifBMQg97PJAyghbFOWj1FTIFbS3frXBKrYb3Ib0a759QqhyrBt0KxR89bI5Cu9LYPYeEW0gZGGrZbYmb6rfDwRD-JNOZGOSy&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "字节跳动 2026 校园招聘 | 广西有岗",
+    "account": "广西考吧",
+    "note": "公众号文章"
+  },
+  {
+    "company": "京东",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517005&ver=6899&signature=l6idV0t5n0TpGYnYS5cLBaMUmT9TwYOGbqM3s1GWhZnflXq*FRlK2rW3LWv5CukWP6BZegN7qXqp2vdRWZZQR-bNQxtm7qglB61d6iSZlEYkrj8aDtyxZcHXhMhXKQhS&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "京东集团2026春季校园招聘补录启动!",
+    "account": "股价的驱动力",
+    "note": "公众号文章"
+  },
+  {
+    "company": "网易",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517013&ver=6899&signature=4zWLZACRWUW4UkO1qOfqH93hPckQmc-HVBBWAb64--CGUkGaROcr*5U7iLimoOgejIxdiz5s9B2NP9gkdgE-e434UTgn5uuhE1AgzRFOaP-pToMAlEBy7IpvYGhrOYSq&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "【招聘信息】网易有道2026春季校招正式启动",
+    "account": "天大就业",
+    "note": "公众号文章"
+  },
+  {
+    "company": "快手",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517022&ver=6899&signature=ACyf*Iq35t5N36hKXtoCtDEtYLR6kvntooBrDcwN3ZsqjfDqRAJNxWB5FrSjI5h2K3*dWp4wh1lNXDd0niFe5zkRjUR-WcklaaKdmSovJeW4uBRourXoLQcrUCrNjp63&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "【名企优选】快手2026届校园招聘持续招聘中!",
+    "account": "西电科大就业指导服务中心",
+    "note": "公众号文章"
+  },
+  {
+    "company": "小红书",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517027&ver=6899&signature=Bza3DoHuHpJpIGB42OrDK85pcSawyEAtMEStUArPscwUmNxNwbj2nHIu3EUM4BiegkC89Pw7h6ZrEtQZJm-MZxbOF57qE*HtVLlxtT2*eN19JWFeRjbSaDxEtirwiL-U&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "17页 | 2026年校招趋势报告-小红书",
+    "account": "河源微墙",
+    "note": "公众号文章"
+  },
+  {
+    "company": "蚂蚁集团",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517031&ver=6899&signature=0FY-YsSijGkJ42L7Vtzh9vogSLlHUxgjkl9Rgz5J*C2P8chcSMJyRdyj6VHo7tDDSWx9jz8OCjRHHP4VkIguiRZXzHe9oUwVSETmP3EMVuznRbTJfYvcSXIL4WhINKfS&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "蚂蚁集团2026春季校园招聘启动,Q&A都在这了!",
+    "account": "互联网坊间八卦",
+    "note": "公众号文章"
+  },
+  {
+    "company": "滴滴",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517036&ver=6899&signature=ACyf*Iq35t5N36hKXtoCtDEtYLR6kvntooBrDcwN3ZsSgZjzDdX-IAlcNm5tvKsS9Bx5sG5iZwZI*y8lzkArwtcXi9*LblAG2LrXHmEOcTCh6LtOqHOJyAxceQodQVjv&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "【名企优选】滴滴2026届春季校园招聘正式启动!",
+    "account": "西电科大就业指导服务中心",
+    "note": "公众号文章"
+  },
+  {
+    "company": "哔哩哔哩",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517040&ver=6899&signature=ozH3YRzs-xJdfnLWYDTHmAEco8E*-5jlepJYaRxOB92qLekzVdh9JiagL31VvdA8L8RTj-1WxB9Jxi9cyPFdNFh2TDgGMzRXtFQMLt-t9zQ-Ja0pWdgilK8ByC0E4XUe&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "招聘 | 哔哩哔哩2026校园招聘 专业不限",
+    "account": "海经院就业",
+    "note": "公众号文章"
+  },
+  {
+    "company": "拼多多",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517045&ver=6899&signature=lduvUci868Uh3pq7uvhPoT3cEeEhk6-kzHtywrygu4hKGhI0nTXTBJFA8XfJTcCEf9gX-kQGq3RjcDJV8LtNmwedduNifWNDSrW9-Qdnd8RYejO32VI0OqV07pP38BJF&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "大厂高薪offer!恭喜澳洲学员拿下拼多多2026校招全职offer",
+    "account": "CareerBuddy",
+    "note": "公众号文章"
+  },
+  {
+    "company": "OPPO",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517049&ver=6899&signature=P88*L3*UuTuARHTuqvv-hIii3WNbcTrs8dvF7H1IMZqPu7YNlPt8OcoOechZPMPw0dIw*C7zHprtg3scZP5i3Vvzf6e4-MT5aduuS4E-CRcGn4n0cOMkgILRN61VPCgp&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "OPPO 2026届校招补招正式开启!",
+    "account": "校招那点事儿",
+    "note": "公众号文章"
+  },
+  {
+    "company": "vivo",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517053&ver=6899&signature=Rezk*8X8y*y4tyW29pee8KCgF28W5jsAzabqZW-tgQj3sNti6iBZrScLPPJAo1WweaDDKQDOUXtjq-Hzj*n6ZFdCmmaqIM2NP87ZScnzkLzwqGzw-CM7o67YXO8Cq*lR&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "【vivo】2026届春季校园招聘正式启动!",
+    "account": "大学生志愿者招募网",
+    "note": "公众号文章"
+  },
+  {
+    "company": "携程",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517058&ver=6899&signature=7X-dZeNSROtlqs7qjjsqfE7VeGoyRDjj4lOUrO4i0K*nOPwtp*g9csSO0OmV0Qy5QUAOe5rlY6u0ecEa5G0W626fcZa*R86oKEFN6LOhXUCozrY1*7LlYQpehCtmy91G&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "【携程集团】2026春季校园招聘启动!不内卷的神仙大厂!旅游行业巨头!",
+    "account": "刺猬实习校招",
+    "note": "公众号文章"
+  },
+  {
+    "company": "科大讯飞",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517063&ver=6899&signature=jF4Ab*cAlAlmuxAmUeMRTvlvV5kHXbhXxHq4wl*J8wAvm17R09OeOfq*uOYlClaEKr57GOIJiwR9gPUBvkYAlt5jfcsmM4Zngkm2Wf*y-BKNPvbqNDSN43w4raSszOGi&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "【企业校招】科大讯飞2026届春季校园招聘正式启动!",
+    "account": "重庆工商大学就业指导中心",
+    "note": "公众号文章"
+  },
+  {
+    "company": "理想汽车",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517071&ver=6899&signature=l6idV0t5n0TpGYnYS5cLBaMUmT9TwYOGbqM3s1GWhZl-lQCpBzqpOapZOVq-Yj5znotHmu8k2r82Lx7c7cGkT8MejfUHPkgYgxlsvJi0gbZ87yR8bpLyb97H0Ja5Pvuc&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "理想汽车2026春季校园招聘正式启动",
+    "account": "股价的驱动力",
+    "note": "公众号文章"
+  },
+  {
+    "company": "小米",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517112&ver=6899&signature=P1h1E1d83F3SQMoVYAp-cM*1lIHad88BYTynvP2jNQMiDwrq68-740gwY5SjWPLSCAGrPu5lq1IJerJxY2IdKmRR7ScDpY0zHvBxKaCFcE*vurNlp7PvWzeomMnndkLg&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "小米集团2026春季校园招聘正式启动!感兴趣的uu们可以开始报名啦!",
+    "account": "柠檬经 Lemon Talk",
+    "note": "公众号文章"
+  },
+  {
+    "company": "百度",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517117&ver=6899&signature=D93rd-8XT62xruxHBywUua6ain2xWKx6hBGySgdAXu9Xk*6DubWpGNkimsz5wPPaT0U1gUCRs3T-bsiVlDFRfXGeA4xY3qbmCkHdp48kfzD*weu9Qm1CgH0dKey9Fjjd&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "【校园招聘】百度2026届校园招聘正式启动",
+    "account": "重理工就业",
+    "note": "公众号文章"
+  },
+  {
+    "company": "大疆",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517121&ver=6899&signature=kzmm5XbNF2HQl34iV6V16BRqhyCxvFzVv*NBmYmxPYYiToEy3jktwrMbqBs01*AarHsy93QOwrOL6WmAN3RtxN3iDTE6Mt-v9zvCOMP7ADITbxgW2izAno2oLauSAl9d&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "校招丨大疆2026校园招聘&实习生招聘!",
+    "account": "小毛驴网订阅号",
+    "note": "公众号文章"
+  },
+  {
+    "company": "蔚来",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517126&ver=6899&signature=iCLWMmX1fAxFV*oI3*L4TLjJfSks9AnYC10eZksiQnKf5FqTVKvfxyuFFovdAst1g-29eNECXIKPnIw8FSeTy4hAXdUAOYrGBMMC*vVC4MGZ4Lm3*JzRcIYro-YV3s7I&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "蔚来招聘 | 蔚来2026届春季校园招聘启动,往届生也能投【含内推码】",
+    "account": "青林职途",
+    "note": "公众号文章"
+  },
+  {
+    "company": "小鹏",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517130&ver=6899&signature=D5B6gv0EslyKhBxIW2xeYkCqXyG0wwmDIrfgvQntlnUvCRyXPOy3LO5IuUUxrLet4STPvJDMV*E1po3uDjuNja3gQROHd8ZzzIIxCAbNorZEdaNQSf0YxKsZ*8xG5zBB&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "小鹏汽车2026届春季校园招聘!广州多岗!",
+    "account": "黔东南本地宝",
+    "note": "公众号文章"
+  },
+  {
+    "company": "比亚迪",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517135&ver=6899&signature=d*rcffg5Y2TbjEUxeByG0nptpmhS108pEygU2M6qJiNxv7wt7b6d3cnFrYNYn4NRs*47UQ1eX6qjLHXP8fd0Eg6xpPSXIod9MwgcijyvRJo8VjziBvJW4Xaeb*bbHi4G&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "【广州招聘】比亚迪2026届春季校园招聘",
+    "account": "广州招聘",
+    "note": "公众号文章"
+  },
+  {
+    "company": "宁德时代",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517139&ver=6899&signature=Tdes7S46LsoLVhEgv9lnGd7Rz1ms*wB98b8eERaVtXyNyajO5Bp0td1RzL7vt5e0EUOp65qGuwCRe7cPsgBJtyulSgpxoS3SYsTT6t2XFwr1CqoXQMAPCMrK7zHYTg*Z&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "宁德时代2026届专业技术人才校园招聘专场宣讲会",
+    "account": "化工先锋苑",
+    "note": "公众号文章"
+  },
+  {
+    "company": "中国移动",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517144&ver=6899&signature=LopGkvVUHdXd0RvFTY2a5Ap647iGXk-sm3nV8Km9W0HRA9hI7JLI8ZffRPzemfBpVMYQuQ3bAxE6mPzX0lHq8VdJje6nbWcj-4HWuLo37rIjxCIZjxXyaq0mng5JopBW&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "中国移动2026春季校园招聘",
+    "account": "猎忠",
+    "note": "公众号文章"
+  },
+  {
+    "company": "招商银行",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517149&ver=6899&signature=yWcYHBr8ReoeFCTAztfiNhdNibHr8u65JWUrYCIp0krEI-6pdHltOzeTUjKNUhZX-GcgtlzEn3DtkZtquVyW3a9wzKytTR6qS43WZzZ3afQ1T-Vt-qjiOpYwHGiDXJu1&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "周日笔试!招商银行2026春季校园招聘第一批笔试通知已发!",
+    "account": "银行招聘网",
+    "note": "公众号文章"
+  },
+  {
+    "company": "华为",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517154&ver=6899&signature=ACyf*Iq35t5N36hKXtoCtDEtYLR6kvntooBrDcwN3ZtOmIu4t4iHDkgtDnMGCZHqwhiJG*BVK8ijy-r*8h-6UQxQt3DbUxFTlkOhr25FZkJ9izSnsg698LFnHCArHDd5&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "【校内宣讲】华为2026届应届生招聘销售类岗位推介会西安电子科技大学专场(3月4日下午)",
+    "account": "西电科大就业指导服务中心",
+    "note": "公众号文章"
+  },
+  {
+    "company": "腾讯",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517158&ver=6899&signature=H1SAstimJS7xmbaVW039NpewBQ1xmPpS32r3IRi3NKaxUyzi1crc5HfOIvrqUmuGFhp2aLCJ6A3rQ0QoOjHbnxqyn0XR157JJpo7FA6pV0*7Dem6ZTXXznmncXBuXKWg&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "2026应届生招聘|覆盖字节/阿里/腾讯/百度/美团/京东等20家企业",
+    "account": "慧翔天地项目管理校友会",
+    "note": "公众号文章"
   }
 ]

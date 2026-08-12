@@ -115,8 +115,28 @@ function fromLinks(html, sourceUrl, company) {
   return out;
 }
 
+function fromWechat(opts, sourceUrl) {
+  const title = String(opts.title || '').trim();
+  const company = String(opts.company || '').trim() || '公众号招聘';
+  const batch = /秋招/.test(title) ? '秋招' : /实习/.test(title) ? '实习' : /春招/.test(title) ? '春招' : '校招';
+  const roles = title.slice(0, 200);
+  return [{
+    type: /实习/.test(title) ? 'intern' : 'campus',
+    company,
+    batch,
+    date: new Date().toISOString().slice(0, 10),
+    roles,
+    cities: '',
+    link: sourceUrl,
+    source: sourceUrl,
+    jd: genericJd(roles, company),
+    note: '公众号文章' + (opts.account ? ' · ' + opts.account : '')
+  }];
+}
+
 async function scrapeWhitelist(url, opts) {
   opts = opts || {};
+  if (opts.wechat || opts.title || /mp\.weixin\.qq\.com/i.test(url)) return fromWechat(opts, url);
   const text = await fetchText(url, opts.timeoutMs);
   if (/\.json($|\?)/i.test(url)) {
     const data = JSON.parse(text);

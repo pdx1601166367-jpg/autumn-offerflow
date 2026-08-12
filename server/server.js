@@ -190,7 +190,7 @@ async function refreshResources(feedUrl, entries) {
   }
   const list = Array.isArray(entries) ? entries : [];
   for (const e of list) {
-    const scraped = await scrapeWhitelist(e.url, { company: e.company, render: !!e.render, timeoutMs: 30000 });
+    const scraped = await scrapeWhitelist(e.url, { company: e.company, render: !!e.render, timeoutMs: 30000, wechat: !!e.wechat, title: e.title || '', account: e.account || '' });
     scraped.forEach(x => merge(x, e.url));
   }
   if (feedUrl || list.length) resources.updatedAt = new Date().toISOString();

@@ -256,6 +256,8 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     await page.waitForFunction(() => document.querySelector('#resSyncBadge').textContent.includes('云端数据'), null, { timeout: 10000 });
     ok('resources source header', (await page.textContent('#resTable')).includes('信息来源'));
     ok('resources source anchor', await page.locator('#resTable a[title^="http"]').count() > 0);
+    ok('resources expanded records', await page.locator('#resTable tbody tr').count() >= 20);
+    ok('resources wechat articles', (await page.textContent('#resTable')).includes('公众号文章'));
     ok('resources link header', (await page.textContent('#resTable')).includes('投递链接'));
     ok('resources link anchor', await page.locator('#resTable a[target="_blank"]').count() > 0);
     const hrefs = await page.$$eval('#resTable a[target="_blank"]', as => as.map(a => a.href));
