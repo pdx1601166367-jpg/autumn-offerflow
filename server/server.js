@@ -138,6 +138,7 @@ function sanitizeResourceItem(raw) {
   return {
     type,
     company: String(raw.company || '').trim(),
+    title: String(raw.title || '').trim().slice(0, 200),
     batch: String(raw.batch || '').trim(),
     date: String(raw.date || '').trim(),
     roles: String(raw.roles || '').trim(),
@@ -190,8 +191,12 @@ async function refreshResources(feedUrl, entries) {
   }
   const list = Array.isArray(entries) ? entries : [];
   for (const e of list) {
-    const scraped = await scrapeWhitelist(e.url, { company: e.company, render: !!e.render, timeoutMs: 30000, wechat: !!e.wechat, title: e.title || '', account: e.account || '' });
-    scraped.forEach(x => merge(x, e.url));
+    try {
+      const scraped = await scrapeWhitelist(e.url, { company: e.company, render: !!e.render, timeoutMs: 30000, wechat: !!e.wechat, title: e.title || '', account: e.account || '', applyLink: e.applyLink || '', roles: e.roles || '', cities: e.cities || '' });
+      scraped.forEach(x => merge(x, e.url));
+    } catch (err) {
+      recordJob('whitelist-skip', false, 0);
+    }
   }
   if (feedUrl || list.length) resources.updatedAt = new Date().toISOString();
   saveResources();

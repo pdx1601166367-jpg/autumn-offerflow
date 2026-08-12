@@ -1,263 +1,338 @@
 [
   {
-    "company": "华为",
-    "url": "https://career.huawei.com/reccampportal/portal5/campus-recruitment.html",
-    "render": false,
-    "note": "服务端 HTML 可直接解析"
-  },
-  {
-    "company": "腾讯",
-    "url": "https://careers.tencent.com/zh-cn/jobopportunity.html",
-    "render": true,
-    "note": "JS 渲染，需 Playwright"
-  },
-  {
-    "company": "字节跳动",
-    "url": "https://jobs.bytedance.com/experienced/position/list",
-    "render": true,
-    "note": "JS 渲染，需 Playwright"
-  },
-  {
-    "company": "美团",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786516990&ver=6899&signature=7X-dZeNSROtlqs7qjjsqfE7VeGoyRDjj4lOUrO4i0K8*ipRAq9xUhMKtBoYKl*dk3h6ejkpRVa11IXb2RLa8VPlw-*lNaaphdlSB1I6Uv3*6CHILn4*Fh6bAYxqc3eQa&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "【美团】2026届春招启动!转正实习+应届校招!六险一金+房补餐补!",
-    "account": "刺猬实习校招",
-    "note": "公众号文章"
-  },
-  {
     "company": "阿里巴巴",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786516995&ver=6899&signature=7Sx6gNOzG*5lzZ*klU*PhQo7TLglKoQtfF92-55k6E4sve9iMhZJYP-uHGfz8bLQlFRjVxGRvyeYhb4GrKeJtToVGrqcQ-3NhTD1x8uegk0bgeSuIsW*uQLeqgilW4*x&new=1",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518566&ver=6899&signature=32vTJg5r1GxBoxSw2Pln59eIA1GD3F-K9i42sUNLFgDSsLHLh9fxxRiiOZXqN*SqGJpt3EM-Mzu7WLinl3DXq6dbcyESilISuRaQUgDT95qsBjJPjhfsQBJxBhVxJ92F&new=1",
     "render": false,
     "wechat": true,
-    "title": "校招|阿里巴巴2026校园招聘持续进行中",
-    "account": "TogoCareer途鸽求职",
-    "note": "公众号文章"
+    "title": "阿里巴巴2027届秋招启动,阿里16大业务集团同时招人,AI相关岗位占80%",
+    "account": "职芽求职Careerbud",
+    "applyLink": "https://talent.alibaba.com/campus",
+    "note": "公众号文章",
+    "roles": "研发、算法、产品、运营、数据、游戏、AI、大模型",
+    "cities": "北京 上海 杭州"
   },
   {
     "company": "字节跳动",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517000&ver=6899&signature=tJh7BnwIf3b5HCs7NWb8cd8nTvQGs53MifBMQg97PJAyghbFOWj1FTIFbS3frXBKrYb3Ib0a759QqhyrBt0KxR89bI5Cu9LYPYeEW0gZGGrZbYmb6rfDwRD-JNOZGOSy&new=1",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518569&ver=6899&signature=32vTJg5r1GxBoxSw2Pln59eIA1GD3F-K9i42sUNLFgCRhZit7PgAjEhEYizAsuuzur5nmHJMUXisoLLA7IEBhYFgafiqnUuaXhWe8JEz97aZcG8weAvs0lRcY9KlJw5N&new=1",
     "render": false,
     "wechat": true,
-    "title": "字节跳动 2026 校园招聘 | 广西有岗",
-    "account": "广西考吧",
-    "note": "公众号文章"
+    "title": "字节跳动2027届秋招全面启动,研发产品运营销售设计七大类全国有岗",
+    "account": "职芽求职Careerbud",
+    "applyLink": "https://jobs.bytedance.com/campus",
+    "note": "公众号文章",
+    "roles": "研发、算法、产品、运营、设计、市场、销售、职能",
+    "cities": "北京 上海 深圳 广州 杭州 成都"
   },
   {
     "company": "京东",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517005&ver=6899&signature=l6idV0t5n0TpGYnYS5cLBaMUmT9TwYOGbqM3s1GWhZnflXq*FRlK2rW3LWv5CukWP6BZegN7qXqp2vdRWZZQR-bNQxtm7qglB61d6iSZlEYkrj8aDtyxZcHXhMhXKQhS&new=1",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518573&ver=6899&signature=32vTJg5r1GxBoxSw2Pln59eIA1GD3F-K9i42sUNLFgBfKbyZtvJvI1OBTGG-ZKM5B1KmLxbqlkoiuiAV43UoyHfej09z23S24TOUAapmWwII0Gf9TgWuJ3sIfnWgYAV*&new=1",
     "render": false,
     "wechat": true,
-    "title": "京东集团2026春季校园招聘补录启动!",
-    "account": "股价的驱动力",
-    "note": "公众号文章"
-  },
-  {
-    "company": "网易",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517013&ver=6899&signature=4zWLZACRWUW4UkO1qOfqH93hPckQmc-HVBBWAb64--CGUkGaROcr*5U7iLimoOgejIxdiz5s9B2NP9gkdgE-e434UTgn5uuhE1AgzRFOaP-pToMAlEBy7IpvYGhrOYSq&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "【招聘信息】网易有道2026春季校招正式启动",
-    "account": "天大就业",
-    "note": "公众号文章"
-  },
-  {
-    "company": "快手",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517022&ver=6899&signature=ACyf*Iq35t5N36hKXtoCtDEtYLR6kvntooBrDcwN3ZsqjfDqRAJNxWB5FrSjI5h2K3*dWp4wh1lNXDd0niFe5zkRjUR-WcklaaKdmSovJeW4uBRourXoLQcrUCrNjp63&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "【名企优选】快手2026届校园招聘持续招聘中!",
-    "account": "西电科大就业指导服务中心",
-    "note": "公众号文章"
-  },
-  {
-    "company": "小红书",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517027&ver=6899&signature=Bza3DoHuHpJpIGB42OrDK85pcSawyEAtMEStUArPscwUmNxNwbj2nHIu3EUM4BiegkC89Pw7h6ZrEtQZJm-MZxbOF57qE*HtVLlxtT2*eN19JWFeRjbSaDxEtirwiL-U&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "17页 | 2026年校招趋势报告-小红书",
-    "account": "河源微墙",
-    "note": "公众号文章"
-  },
-  {
-    "company": "蚂蚁集团",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517031&ver=6899&signature=0FY-YsSijGkJ42L7Vtzh9vogSLlHUxgjkl9Rgz5J*C2P8chcSMJyRdyj6VHo7tDDSWx9jz8OCjRHHP4VkIguiRZXzHe9oUwVSETmP3EMVuznRbTJfYvcSXIL4WhINKfS&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "蚂蚁集团2026春季校园招聘启动,Q&A都在这了!",
-    "account": "互联网坊间八卦",
-    "note": "公众号文章"
-  },
-  {
-    "company": "滴滴",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517036&ver=6899&signature=ACyf*Iq35t5N36hKXtoCtDEtYLR6kvntooBrDcwN3ZsSgZjzDdX-IAlcNm5tvKsS9Bx5sG5iZwZI*y8lzkArwtcXi9*LblAG2LrXHmEOcTCh6LtOqHOJyAxceQodQVjv&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "【名企优选】滴滴2026届春季校园招聘正式启动!",
-    "account": "西电科大就业指导服务中心",
-    "note": "公众号文章"
-  },
-  {
-    "company": "哔哩哔哩",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517040&ver=6899&signature=ozH3YRzs-xJdfnLWYDTHmAEco8E*-5jlepJYaRxOB92qLekzVdh9JiagL31VvdA8L8RTj-1WxB9Jxi9cyPFdNFh2TDgGMzRXtFQMLt-t9zQ-Ja0pWdgilK8ByC0E4XUe&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "招聘 | 哔哩哔哩2026校园招聘 专业不限",
-    "account": "海经院就业",
-    "note": "公众号文章"
-  },
-  {
-    "company": "拼多多",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517045&ver=6899&signature=lduvUci868Uh3pq7uvhPoT3cEeEhk6-kzHtywrygu4hKGhI0nTXTBJFA8XfJTcCEf9gX-kQGq3RjcDJV8LtNmwedduNifWNDSrW9-Qdnd8RYejO32VI0OqV07pP38BJF&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "大厂高薪offer!恭喜澳洲学员拿下拼多多2026校招全职offer",
-    "account": "CareerBuddy",
-    "note": "公众号文章"
-  },
-  {
-    "company": "OPPO",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517049&ver=6899&signature=P88*L3*UuTuARHTuqvv-hIii3WNbcTrs8dvF7H1IMZqPu7YNlPt8OcoOechZPMPw0dIw*C7zHprtg3scZP5i3Vvzf6e4-MT5aduuS4E-CRcGn4n0cOMkgILRN61VPCgp&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "OPPO 2026届校招补招正式开启!",
-    "account": "校招那点事儿",
-    "note": "公众号文章"
-  },
-  {
-    "company": "vivo",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517053&ver=6899&signature=Rezk*8X8y*y4tyW29pee8KCgF28W5jsAzabqZW-tgQj3sNti6iBZrScLPPJAo1WweaDDKQDOUXtjq-Hzj*n6ZFdCmmaqIM2NP87ZScnzkLzwqGzw-CM7o67YXO8Cq*lR&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "【vivo】2026届春季校园招聘正式启动!",
-    "account": "大学生志愿者招募网",
-    "note": "公众号文章"
-  },
-  {
-    "company": "携程",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517058&ver=6899&signature=7X-dZeNSROtlqs7qjjsqfE7VeGoyRDjj4lOUrO4i0K*nOPwtp*g9csSO0OmV0Qy5QUAOe5rlY6u0ecEa5G0W626fcZa*R86oKEFN6LOhXUCozrY1*7LlYQpehCtmy91G&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "【携程集团】2026春季校园招聘启动!不内卷的神仙大厂!旅游行业巨头!",
-    "account": "刺猬实习校招",
-    "note": "公众号文章"
-  },
-  {
-    "company": "科大讯飞",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517063&ver=6899&signature=jF4Ab*cAlAlmuxAmUeMRTvlvV5kHXbhXxHq4wl*J8wAvm17R09OeOfq*uOYlClaEKr57GOIJiwR9gPUBvkYAlt5jfcsmM4Zngkm2Wf*y-BKNPvbqNDSN43w4raSszOGi&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "【企业校招】科大讯飞2026届春季校园招聘正式启动!",
-    "account": "重庆工商大学就业指导中心",
-    "note": "公众号文章"
-  },
-  {
-    "company": "理想汽车",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517071&ver=6899&signature=l6idV0t5n0TpGYnYS5cLBaMUmT9TwYOGbqM3s1GWhZl-lQCpBzqpOapZOVq-Yj5znotHmu8k2r82Lx7c7cGkT8MejfUHPkgYgxlsvJi0gbZ87yR8bpLyb97H0Ja5Pvuc&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "理想汽车2026春季校园招聘正式启动",
-    "account": "股价的驱动力",
-    "note": "公众号文章"
+    "title": "京东2027届秋招11大方向全开,采销物流技术运营全国七城有岗",
+    "account": "职芽求职Careerbud",
+    "applyLink": "https://campus.jd.com/",
+    "note": "公众号文章",
+    "roles": "算法、产品、运营、设计、市场、职能、数据、测试",
+    "cities": "北京 上海 深圳 广州 杭州 成都 武汉"
   },
   {
     "company": "小米",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517112&ver=6899&signature=P1h1E1d83F3SQMoVYAp-cM*1lIHad88BYTynvP2jNQMiDwrq68-740gwY5SjWPLSCAGrPu5lq1IJerJxY2IdKmRR7ScDpY0zHvBxKaCFcE*vurNlp7PvWzeomMnndkLg&new=1",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518577&ver=6899&signature=sjpv0NIzNbGCKwZfp*aQLKR2A6ZrD3XhRErzUoOxY9FQv7JrVHvwqCVilt0NPZwziWQWSPE31Tm6dPz6z2zZJiNBkwOfPbDDbMGFFF*3EKWT4F69YM5DzWSRtRBmktKX&new=1",
     "render": false,
     "wechat": true,
-    "title": "小米集团2026春季校园招聘正式启动!感兴趣的uu们可以开始报名啦!",
-    "account": "柠檬经 Lemon Talk",
-    "note": "公众号文章"
+    "title": "2027秋招 · 小米芯片岗位-景芯福利",
+    "account": "全栈芯片工程师",
+    "applyLink": "https://hr.xiaomi.com/campus",
+    "note": "公众号文章",
+    "roles": "研发、算法、产品、运营、设计、数据、测试、前端",
+    "cities": "北京 上海 深圳 西安"
+  },
+  {
+    "company": "网易",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518581&ver=6899&signature=Filumva77LNdyQBILqFXd4gI2vBx1*7o9tDduVDKpdtuRlNjJ*NFYl2jrmQAP96cc9W*lxRNw6poMFHk6Qys-95xi9FeL8kEYiRIhBspMLTqSmsA4EmD6te6D4pJ*Tha&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "网易集团2027届秋季校招全球启动",
+    "account": "商科求职",
+    "applyLink": "https://campus.163.com/",
+    "note": "公众号文章",
+    "roles": "技术、产品、运营、设计、市场、职能",
+    "cities": "全国"
   },
   {
     "company": "百度",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517117&ver=6899&signature=D93rd-8XT62xruxHBywUua6ain2xWKx6hBGySgdAXu9Xk*6DubWpGNkimsz5wPPaT0U1gUCRs3T-bsiVlDFRfXGeA4xY3qbmCkHdp48kfzD*weu9Qm1CgH0dKey9Fjjd&new=1",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518585&ver=6899&signature=VAzLCTmE3nl-NCIcUELDZ4Ems23M2hZgGmRlAJ9uE5xvPTQumCDIBi4a8NsieLEmL03TnHd9-x6aYXleOGM*bDIUddvmdTEi8NIYTJlga9orQgU5pN6GuCzMgyiLwsqM&new=1",
     "render": false,
     "wechat": true,
-    "title": "【校园招聘】百度2026届校园招聘正式启动",
-    "account": "重理工就业",
-    "note": "公众号文章"
+    "title": "【百度】2027届秋季校园招聘全面启动!许多岗位可投!",
+    "account": "熊猫职研社",
+    "applyLink": "https://talent.baidu.com/jobs/campus",
+    "note": "公众号文章",
+    "roles": "产品、市场、销售、数据、财务、AI、大模型、软件",
+    "cities": "全国"
+  },
+  {
+    "company": "快手",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518590&ver=6899&signature=-mn9cakBgjPw1anJRNXDXhUKm7DdBYEHJ4lOqU6gQbD7-XWBMrLT0d4qyCRXiQl3-f2eo309WM0A7dH-zV0nuDYpUB8d344VXayLfm8Kd2lAgzvlFrW4Py4XF0J1jtQG&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "留学生招聘丨快手2027届秋招校园大使启动招募!",
+    "account": "海归求职网留学生就业中心",
+    "applyLink": "https://campus.kuaishou.cn/",
+    "note": "公众号文章",
+    "roles": "运营、内容、产品、市场",
+    "cities": "全国"
+  },
+  {
+    "company": "小红书",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518594&ver=6899&signature=D-mNc2zqdsru0WXxFGcB7QNlhMEtCXbQS9sGt6n6DNt-CP1TIXyvLagmnH8hghyu-mwbgCH9W-tC2dlqCoq3*5ahggTjEpisySe0xK0WgFugruhRZcaqgO*5k3bg3ubA&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "小红书2027届储备生校园招聘项目开启!1v1 Mentor带教等福利",
+    "account": "毕业生招聘汇总",
+    "applyLink": "https://job.xiaohongshu.com/campus",
+    "note": "公众号文章",
+    "roles": "产品、运营、内容、技术、设计",
+    "cities": "全国"
+  },
+  {
+    "company": "蚂蚁集团",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518598&ver=6899&signature=k8xuxq7m95IVGBftWSGHvU71mBL37NciWZjypVc3wl1afU17LhyABE-QmlI06w3ssdjcjB6LtgEw8RqYyPHIPTwW92NzquAOdQxNC*MzejbijmMdiBEk3zkkUfhKmz*H&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "免笔试(部分岗位)|蚂蚁集团2027届秋招!技术/算法/产品多岗(9城+海外)",
+    "account": "大冤种情侣头像",
+    "applyLink": "https://talent.antgroup.com/campus-recruitment",
+    "note": "公众号文章",
+    "roles": "算法、产品、AI",
+    "cities": "北京 上海 深圳 广州 杭州 成都 重庆 香港"
+  },
+  {
+    "company": "滴滴",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518602&ver=6899&signature=83CcUg7crWgtvmQ3xp9OUDkibk4PErGlMy990QmlwXF*Soo2yZJF2dq3QeJOnAHHWpGjOiv7yfFoyWMoH*cnSp-AbHVwyas8Ru3ZpjffjDsYV17QVa8p3OX7-G*aC1Yj&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "校招 | 滴滴2027届秋储实习生启动预告来袭!",
+    "account": "国聘Pro",
+    "applyLink": "https://talent.didiglobal.com/campus",
+    "note": "公众号文章",
+    "roles": "研发、产品、运营、数据、测试",
+    "cities": "全国"
+  },
+  {
+    "company": "哔哩哔哩",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518606&ver=6899&signature=k8xuxq7m95IVGBftWSGHvU71mBL37NciWZjypVc3wl1OIVl1oAhZnhjTwXjnyA8mN4qbEkvbMKu9gKzrM1SLgkOKJ3-t*qSGuKauScmzqXjsEsF5wXh7A8vCaoClDmOy&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "哔哩哔哩2027届秋招开启!算法/开发/游戏/运营多岗开放",
+    "account": "大冤种情侣头像",
+    "applyLink": "https://jobs.bilibili.com/campus",
+    "note": "公众号文章",
+    "roles": "算法、运营、游戏",
+    "cities": "北京 上海 深圳"
+  },
+  {
+    "company": "拼多多",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518610&ver=6899&signature=lyN8t3CIn5GeIwepyrQ4tcyihCc93W6O7hdFoNKxpkkU5UbgbH5XzY8IUS9SNGca66v2GfzedjEJioHgkv6u5vjxXXIa*CxXr4xI2*D96n3cGeIJZlS2NxqOSFuT23Hy&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "秋招 | 拼多多-PDD 2027届秋招启动",
+    "account": "都是上岸人",
+    "applyLink": "https://careers.pinduoduo.com/campus",
+    "note": "公众号文章",
+    "roles": "研发、产品、运营、市场、销售、咨询",
+    "cities": "上海"
+  },
+  {
+    "company": "OPPO",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518614&ver=6899&signature=bfYCw-oBCM7j71m7DJtq*vGvbtpPA6DWOa1fSsOpCTZ6ODcS8Wv7ZLh7pkeqhZkI6vzjLdn*4oXUN0Nuk*vRhkpHiz9xgdWFC*nPTITrpn4*BlJ62HChX6G02pmC714c&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "[多城市][校招]OPPO-2027届秋招(100+岗位)",
+    "account": "内推圈SYSU",
+    "applyLink": "https://careers.oppo.com/campus",
+    "note": "公众号文章",
+    "roles": "算法、产品、硬件、软件",
+    "cities": "北京 上海 深圳 成都 武汉 南京 西安 东莞"
+  },
+  {
+    "company": "vivo",
+    "url": "https://mp.weixin.qq.com/mp/wappoc_appmsgcaptcha?poc_token=HFwcfGqjET2MbQ_J0p7H-kyIrKYYxyTNmG4qaKd1&target_url=https%3A%2F%2Fmp.weixin.qq.com%2Fs%3Fsrc%3D11%26timestamp%3D1786518618%26ver%3D6899%26signature%3DtKpU574erO4VRQKSWM7P0oxzhExeqVmcwzPfDEaHFVuokwz9tB-WwBc-yp6TyzKOFeG0dMkRVxGAlwHODLPp1h7WfYfc3lXOTvCxUWt7AUwMmmNX2StmKlAa7eEL5ABI%26new%3D1",
+    "render": false,
+    "wechat": true,
+    "title": "校招 | vivo2027届全球校园招聘正式启动",
+    "account": "秋招",
+    "applyLink": "https://hr.vivo.com/",
+    "note": "公众号文章",
+    "roles": "研发、算法、产品、设计、供应链、职能",
+    "cities": "全国"
+  },
+  {
+    "company": "科大讯飞",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518628&ver=6899&signature=XozurqqV-FO9nIm3xF8SDweuz-lmoAkP016enB7-eW3wAyfJzu2SOSNj9sD5mOsd0bfl6wGE*f524mxMe5I2VOvmA60cd7vbuOCa*38uaLUbvig2ZsBQmI4nkooSKP9A&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "科大讯飞2027届秋招正式开启|星火燎原,奔赴AI星辰大海",
+    "account": "前路求索",
+    "applyLink": "https://campus.iflytek.com/",
+    "note": "公众号文章",
+    "roles": "研发、算法、产品、设计、市场、职能、数据、测试",
+    "cities": "北京 上海 深圳 广州 杭州 成都 武汉 南京"
   },
   {
     "company": "大疆",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517121&ver=6899&signature=kzmm5XbNF2HQl34iV6V16BRqhyCxvFzVv*NBmYmxPYYiToEy3jktwrMbqBs01*AarHsy93QOwrOL6WmAN3RtxN3iDTE6Mt-v9zvCOMP7ADITbxgW2izAno2oLauSAl9d&new=1",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518632&ver=6899&signature=k8xuxq7m95IVGBftWSGHvU71mBL37NciWZjypVc3wl1KxQbSNszy1GktuTNMJn5VFPr67Jvoctq-vkXaB4u3MEVX3bU71QbKqQNck5sy4FuGvtzeSG3c7yZyT8lKXcpj&new=1",
     "render": false,
     "wechat": true,
-    "title": "校招丨大疆2026校园招聘&实习生招聘!",
-    "account": "小毛驴网订阅号",
-    "note": "公众号文章"
+    "title": "含免笔试|大疆2027届秋招!空间智能/无人机算法硬件岗(深圳上海北京)",
+    "account": "大冤种情侣头像",
+    "applyLink": "https://we.dji.com/zh-CN/campus",
+    "note": "公众号文章",
+    "roles": "算法、AI、硬件",
+    "cities": "北京 上海 深圳"
+  },
+  {
+    "company": "理想汽车",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518636&ver=6899&signature=32vTJg5r1GxBoxSw2Pln59eIA1GD3F-K9i42sUNLFgC2UsflTeKanjeXtdy*GFEK9N5v8wjNTr8mQ9kqccqkwEYeKGgWEPdrbvKpZgE*SItgUN9vZe*Hu6ry-sNd7YDp&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "理想汽车2027届秋招启动,“理想+”顶尖技术专项同时开放,北京上海深圳等八城有岗",
+    "account": "职芽求职Careerbud",
+    "applyLink": "https://campus.lixiang.com/",
+    "note": "公众号文章",
+    "roles": "研发、算法、产品、设计、销售、职能、安全、供应链",
+    "cities": "北京 上海 深圳 杭州 西安 重庆 香港 常州"
   },
   {
     "company": "蔚来",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517126&ver=6899&signature=iCLWMmX1fAxFV*oI3*L4TLjJfSks9AnYC10eZksiQnKf5FqTVKvfxyuFFovdAst1g-29eNECXIKPnIw8FSeTy4hAXdUAOYrGBMMC*vVC4MGZ4Lm3*JzRcIYro-YV3s7I&new=1",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518640&ver=6899&signature=3u9mj*SD1LPsKo*G8EnDygn1zGA57BgCvbVRNyqEb9R3MlzoH*NQtNooR-Gh9eWGz3Ezje0nsznB3IHdzn7XahVAOLxZEqcpdtOIADXTMr-Cxs*5jzD-tgTEXZn8XOKx&new=1",
     "render": false,
     "wechat": true,
-    "title": "蔚来招聘 | 蔚来2026届春季校园招聘启动,往届生也能投【含内推码】",
-    "account": "青林职途",
-    "note": "公众号文章"
+    "title": "秋招 | 蔚来2027届Super Sparks招募启动!",
+    "account": "秋招网",
+    "applyLink": "https://nio.jobs.feishu.cn/campus",
+    "note": "公众号文章",
+    "roles": "研发、产品、安全、AI、汽车、咨询",
+    "cities": "全国"
   },
   {
     "company": "小鹏",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517130&ver=6899&signature=D5B6gv0EslyKhBxIW2xeYkCqXyG0wwmDIrfgvQntlnUvCRyXPOy3LO5IuUUxrLet4STPvJDMV*E1po3uDjuNja3gQROHd8ZzzIIxCAbNorZEdaNQSf0YxKsZ*8xG5zBB&new=1",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518652&ver=6899&signature=7STylW2oHGU1EjSOtGF5OtnIkHBu1kHmrOT7vjyIVjkz5B0shQKyYHqqKAOU-S0TKQcxFNvOa-nVXRpuC4ZdK6370R4Z8wzVXoHF6SvitCAK*qZl55syMIOrjHXMMwvK&new=1",
     "render": false,
     "wechat": true,
-    "title": "小鹏汽车2026届春季校园招聘!广州多岗!",
-    "account": "黔东南本地宝",
-    "note": "公众号文章"
+    "title": "小鹏集团2027届校园招聘正式启动",
+    "account": "安徽招聘信息汇总",
+    "applyLink": "https://campus.xiaopeng.com/",
+    "note": "公众号文章",
+    "roles": "AI、交付",
+    "cities": "北京 上海 深圳 广州 杭州 成都 武汉 西安"
   },
   {
     "company": "比亚迪",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517135&ver=6899&signature=d*rcffg5Y2TbjEUxeByG0nptpmhS108pEygU2M6qJiNxv7wt7b6d3cnFrYNYn4NRs*47UQ1eX6qjLHXP8fd0Eg6xpPSXIod9MwgcijyvRJo8VjziBvJW4Xaeb*bbHi4G&new=1",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518658&ver=6899&signature=3u9mj*SD1LPsKo*G8EnDygn1zGA57BgCvbVRNyqEb9RmOXcTB4odp6bUmG1iZZScohsqEvxDHD3N2jLKK6Z-YtUQwuLVIWEULMGgbcIhtTg59QVbQHDoEiTmRMBkuZnH&new=1",
     "render": false,
     "wechat": true,
-    "title": "【广州招聘】比亚迪2026届春季校园招聘",
-    "account": "广州招聘",
-    "note": "公众号文章"
-  },
-  {
-    "company": "宁德时代",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517139&ver=6899&signature=Tdes7S46LsoLVhEgv9lnGd7Rz1ms*wB98b8eERaVtXyNyajO5Bp0td1RzL7vt5e0EUOp65qGuwCRe7cPsgBJtyulSgpxoS3SYsTT6t2XFwr1CqoXQMAPCMrK7zHYTg*Z&new=1",
-    "render": false,
-    "wechat": true,
-    "title": "宁德时代2026届专业技术人才校园招聘专场宣讲会",
-    "account": "化工先锋苑",
-    "note": "公众号文章"
+    "title": "秋招 | 2027届比亚迪博士校园招聘正式开启!",
+    "account": "秋招网",
+    "applyLink": "https://campus.byd.com/",
+    "note": "公众号文章",
+    "roles": "研发、算法、产品、技术、职能",
+    "cities": "全国"
   },
   {
     "company": "中国移动",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517144&ver=6899&signature=LopGkvVUHdXd0RvFTY2a5Ap647iGXk-sm3nV8Km9W0HRA9hI7JLI8ZffRPzemfBpVMYQuQ3bAxE6mPzX0lHq8VdJje6nbWcj-4HWuLo37rIjxCIZjxXyaq0mng5JopBW&new=1",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518670&ver=6899&signature=lN4bnFk-oLVla7*aqlRKVPX*I1lwRrgE3sKw0x0vr-9Au5iMiM-r6co-4hw2b8*sYE5kZjzS*XOSUmKBvLgJ7HbRF3uXa-LCTvWS6ZFyz7Tm2VkfQH8q8VjTYoIQBmSD&new=1",
     "render": false,
     "wechat": true,
-    "title": "中国移动2026春季校园招聘",
-    "account": "猎忠",
-    "note": "公众号文章"
+    "title": "中国移动2027届秋招即将开启!",
+    "account": "国央求职网",
+    "applyLink": "https://job.10086.cn/",
+    "note": "公众号文章",
+    "roles": "研发、算法、产品、运营、市场、销售、数据、测试",
+    "cities": "全国"
   },
   {
     "company": "招商银行",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517149&ver=6899&signature=yWcYHBr8ReoeFCTAztfiNhdNibHr8u65JWUrYCIp0krEI-6pdHltOzeTUjKNUhZX-GcgtlzEn3DtkZtquVyW3a9wzKytTR6qS43WZzZ3afQ1T-Vt-qjiOpYwHGiDXJu1&new=1",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518676&ver=6899&signature=SEDMh3IusdkQg4bNlUChXwaaxhhHIUdTKmHPL*Wa2T5cnEwYV92lCUeAOK-yRXtiam6dblgaPKdiQVcceY82FgKyZVlcFFuI9EupPsnvBKxU3ZgL6K6V2nNoRwV31nSh&new=1",
     "render": false,
     "wechat": true,
-    "title": "周日笔试!招商银行2026春季校园招聘第一批笔试通知已发!",
-    "account": "银行招聘网",
-    "note": "公众号文章"
+    "title": "招商银行2027届秋季校园招聘全球启动!",
+    "account": "湖南上岸鸭公考",
+    "applyLink": "https://career.cmbchina.com/",
+    "note": "公众号文章",
+    "roles": "研发、算法、测试、前端、后端、品牌、内容、AI",
+    "cities": "北京 上海 深圳 广州 杭州 成都 武汉 南京"
   },
   {
     "company": "华为",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517154&ver=6899&signature=ACyf*Iq35t5N36hKXtoCtDEtYLR6kvntooBrDcwN3ZtOmIu4t4iHDkgtDnMGCZHqwhiJG*BVK8ijy-r*8h-6UQxQt3DbUxFTlkOhr25FZkJ9izSnsg698LFnHCArHDd5&new=1",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518681&ver=6899&signature=TYQugrQZLnCuiJW13*lsTO0WaV6BJdWKMNIjcd6-CFtgTj0s0pZp-ET9JVwe47IrGL2FGo4MGzTVnSWujt3-D5ilGQLD6dStUKhcRQm3H83MWFwNHUnI3bGI*lEaT0Ys&new=1",
     "render": false,
     "wechat": true,
-    "title": "【校内宣讲】华为2026届应届生招聘销售类岗位推介会西安电子科技大学专场(3月4日下午)",
-    "account": "西电科大就业指导服务中心",
-    "note": "公众号文章"
+    "title": "秋招 |华为2027届实习生招聘正式启动",
+    "account": "应届生秋招 offer",
+    "applyLink": "https://career.huawei.com/reccampportal/portal5/campus-recruitment.html",
+    "note": "公众号文章",
+    "roles": "商务、销售、职能",
+    "cities": "深圳"
   },
   {
     "company": "腾讯",
-    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786517158&ver=6899&signature=H1SAstimJS7xmbaVW039NpewBQ1xmPpS32r3IRi3NKaxUyzi1crc5HfOIvrqUmuGFhp2aLCJ6A3rQ0QoOjHbnxqyn0XR157JJpo7FA6pV0*7Dem6ZTXXznmncXBuXKWg&new=1",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518687&ver=6899&signature=*wcFUrsHWmiwtS4S5vHNHugVgIcB8h-1CbroinRhYV2DVDadDcYIw5ZqVXks1fl3TYoxIGVCzQG6DYLhF8S49iCUVAF3at42MMcezM0f1RxDa5BzBPvEhIdhcnNE-2jr&new=1",
     "render": false,
     "wechat": true,
-    "title": "2026应届生招聘|覆盖字节/阿里/腾讯/百度/美团/京东等20家企业",
-    "account": "慧翔天地项目管理校友会",
-    "note": "公众号文章"
+    "title": "秋招 | 腾讯2027校园招聘全球启动及薪资待遇(附秋招汇总表及经验交流群)",
+    "account": "中财蹦豆",
+    "applyLink": "https://join.qq.com/",
+    "note": "公众号文章",
+    "roles": "研发、算法、产品、运营、设计、市场、职能",
+    "cities": "北京 深圳"
+  },
+  {
+    "company": "中兴",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518694&ver=6899&signature=EWg*IxuSlCuSxC*wlLp6RAK9je6xmAzF22-MBPTSPyZncgDDLctetVBqgoX28gVCR3ZE36H1XAd4huqrXWNdr63H30GlXTnmJkkbKC-ti6FEuaTTWt6HZEeF8mFUBJSw&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "中兴通讯2027届校园招聘启动!",
+    "account": "春招秋招网",
+    "applyLink": "https://job.zte.com.cn/",
+    "note": "公众号文章",
+    "roles": "研发、算法、软件、硬件、市场、职能",
+    "cities": "全国"
+  },
+  {
+    "company": "联想",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518700&ver=6899&signature=ifYiTKZThKccFDQjldZj7lyFiz2Y*-YDrYr-0AAPIpzyJvGOl4TJI3vNF4FnEdXSOwCBFYRYxEo99KGfofSjKjPm-Bui7i0ANhVSHOcMi0cQskPysigvZRRjWrwegkvA&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "联想集团2027届管培生秋季校园招聘(刚刚发布)",
+    "account": "应届求职网",
+    "applyLink": "https://talent.lenovo.com.cn/",
+    "note": "公众号文章",
+    "roles": "技术、产品、运营、供应链、职能",
+    "cities": "全国"
+  },
+  {
+    "company": "美团",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518762&ver=6899&signature=TkysMapAORxqAcCWSXY1fOIFUQ07slTynRzOyyG40S-*jOPFBWALAoDH6*rAWEFpdy7F1kGQGC-*W-JhZ82cOHPcVfzD6nuoEJLz-oCPuUJAMNWOjHdGRg0fU*5jCdSg&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "美团战略与投资平台2027届暑期转正实习正式启动",
+    "account": "暑期实习网",
+    "applyLink": "https://campus.meituan.com/",
+    "note": "公众号文章",
+    "roles": "产品、运营、技术、数据、市场",
+    "cities": "全国"
+  },
+  {
+    "company": "携程",
+    "url": "https://mp.weixin.qq.com/s?src=11&timestamp=1786518788&ver=6899&signature=hPHDElWIe1pwrENeE5YWWyqN06kXyUMEPRMihF6DMmvP5wY1D7qGJIo0CfotZDI4d1Fm9Z8Z4JcXnOVYGuHgeTM9K-uE*wcYbW*qT-WZv4RM1o3rzppw29pMiCJB32bC&new=1",
+    "render": false,
+    "wechat": true,
+    "title": "携程集团2027届暑期实习招聘正式启动",
+    "account": "超级实习生计划",
+    "applyLink": "https://campus.ctrip.com/",
+    "note": "公众号文章",
+    "roles": "市场、内容",
+    "cities": "全国"
   }
 ]
