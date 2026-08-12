@@ -131,7 +131,7 @@
 
   const NAV = [
     { id: "dashboard", label: "工作台", icon: "dashboard" },
-    { id: "agent", label: "AI 求职 Agent", icon: "bot" },
+    { id: "agent", label: "AI 求职助手", icon: "bot" },
     { id: "mock", label: "模拟面试", icon: "mic" },
     { id: "solver", label: "笔试解题台", icon: "scan" },
     { id: "bank", label: "面试题库", icon: "book" },
@@ -143,7 +143,7 @@
   ];
   const TITLES = {
     dashboard: ["工作台", "求职进度与今日任务总览"],
-    agent: ["AI 求职 Agent", "提出求职目标，Agent 自动规划、调用工具并生成行动方案"],
+    agent: ["AI 求职助手", "提出求职目标，AI 助手自动规划、调用工具并生成行动方案"],
     mock: ["AI 模拟面试", "配置面试档案并开始一场真实感训练"],
     solver: ["笔试解题台", "粘贴题目，秒得思路、复杂度与示例代码"],
     bank: ["面试题库", "按方向、难度与题型筛选高频题目"],
@@ -362,7 +362,10 @@
     view.innerHTML = fn(params);
     afterRender(path, params);
     const av = $(".avatar");
-    if (av) av.textContent = window.Auth && Auth.user() ? Auth.user().username.slice(0, 1).toUpperCase() : (S.profile.name || "林").slice(0, 1);
+    if (av) {
+      const uname = (S.userProfile.basic && S.userProfile.basic.name) || S.profile.name || (window.Auth && Auth.user() ? Auth.user().username : "访");
+      av.textContent = window.Auth && Auth.user() ? Auth.user().username.slice(0, 1).toUpperCase() : uname.slice(0, 1);
+    }
     const pill = $("#aiPillText");
     if (pill) {
       let pt = window.Auth && Auth.token() ? "云同步已开启" : "";
@@ -421,6 +424,8 @@
 
   function pageDashboard() {
     const apps = S.apps;
+    const upName = (S.userProfile.basic && S.userProfile.basic.name) || S.profile.name || "同学";
+    const upRole = (S.userProfile.goals && S.userProfile.goals.roles && S.userProfile.goals.roles[0]) || "未设置";
     const active = apps.filter(a => ["已投递", "笔试", "面试"].includes(a.status)).length;
     const offers = apps.filter(a => a.status === "Offer").length;
     const avg = S.reviews.length ? Math.round(S.reviews.reduce((s, r) => s + r.score, 0) / S.reviews.length) : 0;
@@ -452,8 +457,8 @@
     return `
       <div class="hero-band">
         <div class="grow">
-          <h2>${esc(S.profile.name)}，今天也准备充分一点。</h2>
-          <p>目标岗位 ${esc(S.profile.role || "未设置")} · ${today()} · 距离秋招黄金期还有 ${Math.max(0, Math.round((new Date(new Date().getFullYear(), 8, 1) - new Date()) / 864e5))} 天</p>
+          <h2>${esc(upName)}，今天也准备充分一点。</h2>
+          <p>目标岗位 ${esc(upRole)} · ${today()} · 距离秋招黄金期还有 ${Math.max(0, Math.round((new Date(new Date().getFullYear(), 8, 1) - new Date()) / 864e5))} 天</p>
         </div>
         <div class="hero-score"><b>${prep}</b><span>准备指数</span></div>
       </div>
@@ -685,10 +690,10 @@
     return `
       <div class="hero-band">
         <div class="grow"><h2>Hi，${esc(up.basic.name || "同学")}</h2><p>我已经了解你的求职情况。当前目标：${esc(roles)} · 求职阶段：${esc(stage)}</p></div>
-        ${badge("Single Agent + Tools", "b-teal")}
+        ${badge("AI 助手", "b-teal")}
       </div>
       <div class="card panel" style="margin-bottom:14px">
-        <div class="panel-head"><div><h2>求职画像</h2><div class="sub">Agent Context 第一层：你是谁、你想做什么</div></div>
+        <div class="panel-head"><div><h2>求职画像</h2><div class="sub">画像 Context 第一层：你是谁、你想做什么</div></div>
           <button class="btn btn-sm" data-action="agent-onboard">${Icon("edit")}完善画像</button></div>
         <div class="score-grid" style="grid-template-columns:110px 1fr">
           <div class="ring" style="--val:${up.completeness}"><div><b>${up.completeness}</b><span>完整度</span></div></div>
@@ -704,7 +709,7 @@
       </div>
       ${!window.OFFERFLOW_BACKEND && (!S.profile.aiEnabled || !S.profile.apiKey) ? '<div class="note" style="margin-bottom:14px">' + Icon("lightbulb") + "<span>当前为本地规则引擎（未配置 AI 接口）。配置 AI 接口或部署后端后，Agent 将由大模型驱动规划、工具调用与动态决策。</span></div>" : ""}
       <div class="card panel" style="margin-bottom:14px">
-        <div class="form-item full" style="margin-bottom:12px"><label>Agent Task Starter</label>
+        <div class="form-item full" style="margin-bottom:12px"><label>快捷任务</label>
           <div class="pill-row">${starters.map(s => '<button type="button" class="option-chip" data-action="agent-starter" data-value="' + esc(s[1]) + '">' + esc(s[0]) + "</button>").join("")}</div>
         </div>
         <div class="form-grid">
@@ -2323,8 +2328,6 @@
       <div class="modal-head"><h3>设置</h3><button class="icon-btn" data-action="close-modal">${Icon("x")}</button></div>
       <div class="modal-body">
         <div class="form-grid">
-          <div class="form-item"><label>姓名</label><input id="setName" value="${esc(p.name)}"></div>
-          <div class="form-item"><label>目标岗位</label><input id="setRole" value="${esc(p.role)}"></div>
           ${aiBlock}
         </div>
         ${aiNote}
@@ -2342,8 +2345,6 @@
   }
 
   function saveSettings() {
-    S.profile.name = ($("#setName") && $("#setName").value.trim()) || S.profile.name;
-    S.profile.role = ($("#setRole") && $("#setRole").value.trim()) || "";
     const ai = $("#setAi");
     if (ai) S.profile.aiEnabled = ai.checked;
     const base = $("#setBase");

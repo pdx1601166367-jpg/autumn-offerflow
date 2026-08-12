@@ -142,6 +142,7 @@ function sanitizeResourceItem(raw) {
     roles: String(raw.roles || '').trim(),
     cities: String(raw.cities || '').trim(),
     link: String(raw.link || '').trim(),
+    jd: String(raw.jd || '').slice(0, 3000),
     note: String(raw.note || '').trim()
   };
 }

@@ -64,6 +64,7 @@ function fromJsonLd(html, sourceUrl) {
           roles: node.title || '',
           cities: String(loc),
           link: node.url || sourceUrl,
+          jd: String(node.description || '').slice(0, 3000),
           note: 'JSON-LD 白名单抓取'
         });
       });
@@ -99,6 +100,7 @@ function fromLinks(html, sourceUrl, company) {
       roles: text.slice(0, 120),
       cities: '',
       link,
+      jd: '',
       note: '白名单链接抓取'
     });
   }

@@ -51,7 +51,13 @@
   function localJobSearch(goal, state, remoteItems) {
     const pool = remoteItems && remoteItems.length ? remoteItems : (D.resources.campus || []);
     const found = pool.filter(r => goal.company && (r.company.includes(goal.company) || goal.company.includes(r.company)));
-    return found.length ? found : [{ company: goal.company || "目标企业", batch: "目标岗位", roles: goal.role, cities: "待确认", link: "", note: "未在内置资料中找到，可手动粘贴 JD" }];
+    return found.length ? found : [{ company: goal.company || "目标企业", batch: "目标岗位", roles: goal.role, cities: "待确认", link: "", jd: "", note: "未检索到该岗位 JD，请提供 JD 文本或岗位链接" }];
+  }
+
+  function extractKeywords(text) {
+    const words = String(text || "").match(/[\u4e00-\u9fa5A-Za-z0-9+#.]{2,}/g) || [];
+    const stop = new Set(["以及", "负责", "我们", "要求", "岗位", "工作", "职责", "能力", "相关", "熟悉", "优先", "具备", "经验", "参与", "良好", "了解", "掌握"]);
+    return [...new Set(words.filter(w => !stop.has(w)))].slice(0, 12);
   }
 
   function jdAnalysis(goal, opts) {
@@ -200,11 +206,22 @@
         const remote = await fetchRemoteJobs();
         const jobs = localJobSearch(ctx.goal, ctx.state, remote);
         ctx.jobs = jobs;
-        return { summary: "检索到 " + jobs.length + " 条相关岗位：" + jobs[0].company + " · " + jobs[0].batch + (jobs[0].link ? "" : "（无 JD，下一步请调用 analyze_jd）"), data: jobs.slice(0, 5) };
+        const hasJd = jobs.some(j => j.jd && j.jd.trim());
+        return { summary: "检索到 " + jobs.length + " 条相关岗位" + (hasJd ? "（含官方 JD）" : "（未含官方 JD，需要用户提供 JD）") + "：" + jobs[0].company + " · " + jobs[0].batch, data: jobs.slice(0, 5) };
       }
       case "analyze_jd": {
+        if (ctx.opts.jd && ctx.opts.jd.trim()) {
+          ctx.jd = { source: "用户粘贴 JD", keywords: extractKeywords(ctx.opts.jd), jd: ctx.opts.jd.slice(0, 2000) };
+          return { summary: "用户提供 JD，关键要求：" + ctx.jd.keywords.slice(0, 6).join("、"), data: ctx.jd };
+        }
+        const jobJd = (ctx.jobs || []).find(j => j.jd && j.jd.trim());
+        if (jobJd) {
+          ctx.jd = { source: "岗位库 JD", keywords: extractKeywords(jobJd.jd), jd: jobJd.jd.slice(0, 2000) };
+          return { summary: "岗位库 JD 关键要求：" + ctx.jd.keywords.slice(0, 6).join("、"), data: ctx.jd };
+        }
         ctx.jd = jdAnalysis(ctx.goal, ctx.opts);
-        return { summary: "JD 关键要求：" + ctx.jd.keywords.slice(0, 6).join("、"), data: ctx.jd };
+        ctx.jd.missingJd = true;
+        return { summary: "未检索到官方 JD，使用预期能力模型（非官方），需用户提供 JD 或岗位链接", data: ctx.jd };
       }
       case "analyze_resume": {
         const text = ctx.opts.resumeText !== undefined ? ctx.opts.resumeText : readLatestResume(ctx.state);
@@ -291,7 +308,7 @@
     const hasCompleteReport = r && Array.isArray(r.plan) && r.plan.length && (Array.isArray(r.strengths) || Array.isArray(r.gaps));
     if (!hasCompleteReport) {
       const reportPrompt = [
-        { role: "system", content: "你是 OfferFlow 求职 Agent 的报告生成器。基于工具返回的真实数据输出 JSON：{\"matchScore\":0-100,\"strengths\":[\"...\"],\"gaps\":[\"...\"],\"plan\":[\"Day 1：...\"],\"tasks\":[{\"title\":\"...\",\"note\":\"...\"}],\"narrative\":\"最终结论\"}。只输出 JSON，不要 Markdown，不要编造数据。" },
+        { role: "system", content: "你是 OfferFlow 求职助手的报告生成器。基于工具返回的真实数据输出 JSON：{\"matchScore\":0-100,\"strengths\":[\"...\"],\"gaps\":[\"维度：具体问题 + 证据 + 行动\"],\"plan\":[\"Day 1：...\"],\"tasks\":[{\"title\":\"...\",\"note\":\"...\"}],\"narrative\":\"用 1. 2. 3. 4. 5. 输出至少 5 条分点结论（匹配度、最大优势、最大差距、优先行动、风险提示）\"}。只输出 JSON，不要 Markdown，不要编造数据。" },
         { role: "user", content: JSON.stringify({
           goal: goalText,
           jobs: ctx.jobs,
@@ -316,7 +333,8 @@
     const cap = ctx.cap || capability(state);
     const plan = Array.isArray(r.plan) && r.plan.length ? r.plan : ctx.plan;
     const tasks = Array.isArray(r.tasks) && r.tasks.length ? r.tasks.map(t => typeof t === "string" ? { title: t, note: "Agent 生成" } : t) : ctx.tasks;
-    const ids = Array.isArray(r.questionIds) && r.questionIds.length ? r.questionIds : ctx.ids;
+    const ids = (Array.isArray(r.questionIds) && r.questionIds.length ? r.questionIds : ctx.ids);
+    const finalIds = ids.length ? ids : recommend(state, ["AI 产品", "产品"], 5);
     const matchScore = typeof r.matchScore === "number" ? r.matchScore : (ctx.resume ? ctx.resume.score : 60);
     const strengths = Array.isArray(r.strengths) && r.strengths.length ? r.strengths : [];
     const gaps = Array.isArray(r.gaps) && r.gaps.length ? r.gaps : cap.weak.slice(0, 3).map(c => {
@@ -325,7 +343,7 @@
     });
     return {
       goal, jobs: ctx.jobs.length ? ctx.jobs : localJobSearch(goal, state), jd: ctx.jd || jdAnalysis(goal, opts),
-      resume: ctx.resume, matchScore, cap, mem: ctx.mem || reviewMemory(state), ids, plan, tasks, strengths, gaps,
+      resume: ctx.resume, matchScore, cap, mem: ctx.mem || reviewMemory(state), ids: finalIds, plan, tasks, strengths, gaps,
       trace, steps, ms: 0, mode: "ai", reportSource, deterministic: false, company: goal.company, role: goal.role,
       narrative: r.narrative || ""
     };
@@ -358,10 +376,11 @@
     tool("generate_plan", "生成准备计划", plan.length + " 天");
     const tasks = tasksFrom(goal, plan, cap);
     tool("propose_tasks", "生成行动任务", "建议 " + tasks.length + " 个任务（待用户确认）");
+    const narrative = "1. 匹配分：" + resume.score + "/100；\n2. 最大优势：" + (strengths[0] || "简历已就绪，可进入匹配优化") + "；\n3. 主要差距：" + (gaps.join("；") || "暂无练习数据，建议先完成一次模拟面试") + "；\n4. 优先行动：完成 " + ids.length + " 道推荐题并安排一次模拟面试；\n5. 风险提示：当前为本地规则降级，配置 AI 后分析会更全面。";
     return {
       goal, jobs, jd, resume, matchScore: resume.score, cap, mem, ids, plan, tasks,
       strengths: resumeText.trim() ? ["简历已就绪"] : [], gaps: cap.weak.map(c => c + " 平均分 " + (cap.stats.find(x => x.cat === c) || { score: 60 }).score),
-      trace, steps: [], ms: Date.now() - t0, mode: "local", deterministic: true, company: goal.company, role: goal.role, narrative: ""
+      trace, steps: [], ms: Date.now() - t0, mode: "local", deterministic: true, company: goal.company, role: goal.role, narrative
     };
   }
 
