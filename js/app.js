@@ -11,6 +11,10 @@
   }
   function nl(v) { return esc(v).replace(/\n/g, "<br>"); }
   function uid() { return "id" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  const LEGACY_SEED_APP_IDS = ["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8"];
+  function stripSeedApps(list) {
+    return (Array.isArray(list) ? list : []).filter(a => !LEGACY_SEED_APP_IDS.includes(String(a && a.id || "")));
+  }
   function today() { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
   function nowStr() {
     const d = new Date();
@@ -36,7 +40,7 @@
   function defaultState() {
     return {
       profile: { name: "", role: "", aiEnabled: false, apiKey: "", apiBase: "https://api.openai.com/v1", model: "gpt-4o-mini" },
-      apps: JSON.parse(JSON.stringify(D.seedApps)),
+      apps: stripSeedApps(JSON.parse(JSON.stringify(D.seedApps))),
       reviews: JSON.parse(JSON.stringify(D.seedReviews)),
       favorites: [],
       mastered: [],
@@ -56,7 +60,7 @@
       const base = defaultState();
       return {
         profile: Object.assign(base.profile, parsed.profile || {}),
-        apps: Array.isArray(parsed.apps) ? parsed.apps : base.apps,
+        apps: stripSeedApps(Array.isArray(parsed.apps) ? parsed.apps : base.apps),
         reviews: Array.isArray(parsed.reviews) ? parsed.reviews : base.reviews,
         favorites: Array.isArray(parsed.favorites) ? parsed.favorites : base.favorites,
         mastered: Array.isArray(parsed.mastered) ? parsed.mastered : base.mastered,
@@ -84,7 +88,7 @@
     const r = raw || {};
     return {
       profile: Object.assign({}, base.profile, r.profile || {}),
-      apps: Array.isArray(r.apps) ? r.apps : base.apps,
+      apps: stripSeedApps(Array.isArray(r.apps) ? r.apps : base.apps),
       reviews: Array.isArray(r.reviews) ? r.reviews : base.reviews,
       favorites: Array.isArray(r.favorites) ? r.favorites : base.favorites,
       mastered: Array.isArray(r.mastered) ? r.mastered : base.mastered,
@@ -1831,7 +1835,7 @@
   }
 
   function trackerTable(list) {
-    if (!list.length) return '<div class="card empty">' + Icon("kanban") + "<h3>没有匹配的投递</h3><p>点击右上角新增一条记录</p></div>";
+    if (!list.length) return '<div class="card empty">' + Icon("kanban") + "<h3>" + (S.apps.length ? "没有匹配的投递" : "暂无投递记录") + "</h3><p>点击右上角新增一条记录</p></div>";
     return `
       <div class="card table-wrap">
         <table>
@@ -1990,7 +1994,7 @@
       const base = defaultState();
       S = {
         profile: Object.assign({}, base.profile, b.profile || {}),
-        apps: Array.isArray(b.apps) ? b.apps : [],
+        apps: Array.isArray(b.apps) ? stripSeedApps(b.apps) : [],
         reviews: Array.isArray(b.reviews) ? b.reviews : [],
         favorites: Array.isArray(b.favorites) ? b.favorites : [],
         mastered: Array.isArray(b.mastered) ? b.mastered : [],
@@ -2002,7 +2006,7 @@
         tasks: Array.isArray(b.tasks) ? b.tasks : []
       };
     } else {
-      mergeById(S.apps, b.apps);
+      mergeById(S.apps, stripSeedApps(b.apps));
       mergeById(S.reviews, b.reviews);
       mergeById(S.tasks, b.tasks);
       mergeById(S.resumes, b.resumes);

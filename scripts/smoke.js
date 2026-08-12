@@ -32,6 +32,30 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   ok('dashboard full-width cards', await page.locator('#view .card.panel').count() >= 4);
   ok('dashboard no split layout', await page.locator('#view .split').count() === 0);
 
+  await goto(BASE + '/#/tracker');
+  const trackerEmptyText = await page.textContent('#trackerBody');
+  ok('tracker no seed apps', !trackerEmptyText.includes('字节跳动') && !trackerEmptyText.includes('腾讯') && !trackerEmptyText.includes('微纳核芯') && !trackerEmptyText.includes('英飞凌'));
+  ok('tracker empty state', trackerEmptyText.includes('暂无投递记录'));
+  await page.evaluate(() => {
+    const raw = JSON.parse(localStorage.getItem('offerflow:v1') || '{}');
+    raw.apps = [
+      { id: 'a1', company: '字节跳动', role: '前端', city: '北京', channel: '官网', status: '面试', applyDate: '2026-07-20', note: '', link: '' },
+      { id: 'my1', company: '真实投递', role: 'AI 产品经理', city: '上海', channel: '内推', status: '意向', applyDate: '2026-08-10', note: '', link: '' }
+    ];
+    localStorage.setItem('offerflow:v1', JSON.stringify(raw));
+  });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(250);
+  const migratedText = await page.textContent('#trackerBody');
+  ok('legacy seed apps migrated out', migratedText.includes('真实投递') && !migratedText.includes('字节跳动'));
+  await page.evaluate(() => {
+    const raw = JSON.parse(localStorage.getItem('offerflow:v1') || '{}');
+    raw.apps = [];
+    localStorage.setItem('offerflow:v1', JSON.stringify(raw));
+  });
+  await page.reload({ waitUntil: 'load' });
+  await goto(BASE + '/');
+
   await step('task add edit delete', async () => {
     await page.click('[data-action="open-task-modal"]');
     await page.fill('#taskTitle', '测试任务');

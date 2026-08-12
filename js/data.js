@@ -533,16 +533,7 @@
     { id: "st12", q: "离第一场正式面试还有多久？", opts: ["还没投递", "1 周以内", "1-4 周", "1 个月以上"], scores: [1, 4, 3, 2] }
   ];
 
-  const SEED_APPS = [
-    { id: "a1", company: "字节跳动", role: "前端开发工程师", city: "北京", channel: "官网投递", status: "面试", applyDate: "2026-07-20", note: "一面已约 08/12", link: "https://jobs.bytedance.com", interviewAt: "2026-08-12T10:00", remindMin: 30 },
-    { id: "a2", company: "腾讯", role: "后台开发工程师", city: "深圳", channel: "内推", status: "笔试", applyDate: "2026-07-25", note: "08/09 笔试", link: "https://careers.tencent.com" },
-    { id: "a3", company: "美团", role: "算法工程师", city: "北京", channel: "官网投递", status: "已投递", applyDate: "2026-08-01", note: "", link: "https://zhaopin.meituan.com" },
-    { id: "a4", company: "蚂蚁集团", role: "数据研发工程师", city: "杭州", channel: "内推", status: "面试", applyDate: "2026-07-18", note: "二面通过", link: "https://talent.antgroup.com", interviewAt: "2026-08-13T15:00", remindMin: 60 },
-    { id: "a5", company: "华为", role: "软件工程师", city: "南京", channel: "官网投递", status: "意向", applyDate: "2026-08-03", note: "待完善简历后投递", link: "https://career.huawei.com" },
-    { id: "a6", company: "小红书", role: "前端开发实习生", city: "上海", channel: "实习平台", status: "Offer", applyDate: "2026-07-10", note: "已收 offer", link: "https://job.xiaohongshu.com" },
-    { id: "a7", company: "微纳核芯", role: "AI 芯片架构师", city: "杭州", channel: "校招官网", status: "笔试", applyDate: "2026-08-05", note: "8 月批次笔试；官网待补充", link: "" },
-    { id: "a8", company: "英飞凌", role: "Staff FAE", city: "上海", channel: "官网投递", status: "拒绝", applyDate: "2026-07-15", note: "英语轮未通过", link: "https://careers.infineon.com" }
-  ];
+  const SEED_APPS = [];
 
   const SEED_REVIEWS = [
     {
