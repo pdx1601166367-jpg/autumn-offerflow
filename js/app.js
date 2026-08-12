@@ -3,6 +3,7 @@
   const Icon = window.Icon;
   const E = window.Engine;
   const LS_KEY = "offerflow:v1";
+  const APP_VERSION = "v2.4-onboarding";
   const $ = (s) => document.querySelector(s);
 
   function esc(v) {
@@ -2690,6 +2691,8 @@
   if (pill) pill.textContent = S.profile.aiEnabled && S.profile.apiKey ? "AI 接口已启用" : "本地 AI 在线";
   const av = $(".avatar");
   if (av) av.textContent = (S.profile.name || "林").slice(0, 1);
+  const tag = $("#buildTag");
+  if (tag) tag.textContent = "build " + APP_VERSION;
 
   window.__onAuthChange = function () {
     render();
