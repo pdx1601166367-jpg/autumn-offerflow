@@ -28,7 +28,7 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   await page.waitForTimeout(300);
   ok('dashboard hero', (await page.textContent('.hero-band h2')).includes('今天也准备充分一点'));
   ok('dashboard no target role', !(await page.textContent('.hero-band')).includes('目标岗位'));
-  ok('settings icon color', await page.$eval('[data-action="open-settings"]', el => getComputedStyle(el).color) === 'rgb(37, 99, 235)');
+  ok('settings icon color', await page.$eval('[data-action="open-settings"]', el => getComputedStyle(el).color) === 'rgb(232, 108, 64)');
   ok('guest banner shown', (await page.textContent('#view')).includes('访客演示模式'));
   ok('dashboard no stat cards', await page.locator('.stat-card').count() === 0);
   ok('dashboard full-width cards', await page.locator('#view .card.panel').count() >= 4);
