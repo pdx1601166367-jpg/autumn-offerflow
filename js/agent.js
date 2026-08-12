@@ -124,8 +124,23 @@
   function buildMemory(state, opts, goal) {
     const resumeText = opts.resumeText !== undefined ? opts.resumeText : readLatestResume(state);
     const cap = capability(state);
+    const up = state.userProfile || {};
+    const goals = up.goals || {};
     return {
-      profile: { name: (state.profile && state.profile.name) || "未设置", role: (state.profile && state.profile.role) || "未设置" },
+      profile: {
+        name: (up.basic && up.basic.name) || (state.profile && state.profile.name) || "未设置",
+        role: (goals.roles && goals.roles[0]) || (state.profile && state.profile.role) || "未设置",
+        stage: goals.stage || "",
+        basic: up.basic || {},
+        education: (up.education || []).map(x => x.raw).slice(0, 5),
+        experiences: (up.experiences || []).map(x => x.raw).slice(0, 5),
+        projects: (up.projects || []).map(x => x.raw).slice(0, 5),
+        skills: up.skills || {},
+        aiPractice: up.aiPractice || [],
+        targetCompanies: goals.companies || [],
+        targetCities: goals.cities || [],
+        direction: goals.direction || []
+      },
       goal,
       resumeText: resumeText.slice(0, 1200),
       jdText: opts.jd ? opts.jd.slice(0, 1500) : "",
@@ -231,6 +246,9 @@
   async function runAgentic(goalText, opts, profile) {
     const state = opts.state || readState();
     const goal = parseGoal(goalText);
+    const upGoals = (state.userProfile || {}).goals || {};
+    if (!goal.role && upGoals.roles && upGoals.roles[0]) goal.role = upGoals.roles[0];
+    if (!goal.company && upGoals.companies && upGoals.companies[0]) goal.company = upGoals.companies[0];
     const ctx = { state, goal, opts, jobs: [], jd: null, resume: null, resumeText: "", cap: null, mem: null, ids: [], plan: [], tasks: [], matchScore: 0 };
     const trace = [];
     const steps = [];
@@ -317,6 +335,9 @@
     const t0 = Date.now();
     const state = opts.state || readState();
     const goal = parseGoal(goalText);
+    const upGoals = (state.userProfile || {}).goals || {};
+    if (!goal.role && upGoals.roles && upGoals.roles[0]) goal.role = upGoals.roles[0];
+    if (!goal.company && upGoals.companies && upGoals.companies[0]) goal.company = upGoals.companies[0];
     const trace = [];
     const tool = (name, label, detail) => trace.push({ type: "tool", name, label, detail });
     tool("search_job", "搜索目标岗位", goal.company + " · " + goal.role);

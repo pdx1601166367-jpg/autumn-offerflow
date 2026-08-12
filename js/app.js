@@ -17,6 +17,21 @@
   }
   function shuffle(a) { const arr = a.slice(); for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
 
+  function emptyUserProfile() {
+    return {
+      complete: false,
+      basic: { name: "", school: "", major: "", degree: "", gradYear: "" },
+      education: [],
+      experiences: [],
+      projects: [],
+      skills: { product: [], ai: [], tech: [] },
+      aiPractice: [],
+      goals: { roles: [], companies: [], cities: [], stage: "", direction: [] },
+      source: { name: "", updatedAt: "" },
+      completeness: 0
+    };
+  }
+
   function defaultState() {
     return {
       profile: { name: "林同学", role: "前端开发", aiEnabled: false, apiKey: "", apiBase: "https://api.openai.com/v1", model: "gpt-4o-mini" },
@@ -28,6 +43,7 @@
       selfTests: [],
       solved: [],
       practice: [],
+      userProfile: emptyUserProfile(),
       tasks: JSON.parse(JSON.stringify(D.seedTasks)).map(t => Object.assign({ id: uid(), done: false }, t))
     };
   }
@@ -47,6 +63,7 @@
         selfTests: Array.isArray(parsed.selfTests) ? parsed.selfTests : base.selfTests,
         solved: Array.isArray(parsed.solved) ? parsed.solved : base.solved,
         practice: Array.isArray(parsed.practice) ? parsed.practice : base.practice,
+        userProfile: parsed.userProfile && typeof parsed.userProfile === "object" ? Object.assign(emptyUserProfile(), parsed.userProfile) : base.userProfile,
         tasks: Array.isArray(parsed.tasks) ? parsed.tasks : base.tasks
       };
     } catch (e) { return defaultState(); }
@@ -74,6 +91,7 @@
       selfTests: Array.isArray(r.selfTests) ? r.selfTests : base.selfTests,
       solved: Array.isArray(r.solved) ? r.solved : base.solved,
       practice: Array.isArray(r.practice) ? r.practice : base.practice,
+      userProfile: r.userProfile && typeof r.userProfile === "object" ? Object.assign(emptyUserProfile(), r.userProfile) : base.userProfile,
       tasks: Array.isArray(r.tasks) ? r.tasks : base.tasks
     };
   }
@@ -105,6 +123,8 @@
   let agentInput = "";
   let agentShowJd = false;
   let agentResult = null;
+  let agentView = (S.userProfile && S.userProfile.complete) ? "home" : "welcome";
+  let agentParsed = null;
   let diagIds = [];
   const filters = { bank: { q: "", cat: "全部", diff: "全部", type: "全部", fav: false, master: false }, tracker: { q: "", status: "全部", view: "table" }, res: { tab: "campus", q: "", city: "全部" } };
 
@@ -357,6 +377,21 @@
 
   function afterRender(path, params) {
     if (path === "mock") bindMock();
+    if (path === "agent") {
+      const fi = $("#agentResumeFile");
+      if (fi) fi.addEventListener("change", e => { if (e.target.files && e.target.files[0]) handleAgentResumeFile(e.target.files[0]); });
+      const dz = $("#agentDropZone");
+      if (dz) {
+        dz.addEventListener("click", () => { const f = $("#agentResumeFile"); if (f) f.click(); });
+        dz.addEventListener("dragover", e => { e.preventDefault(); dz.style.borderColor = "var(--brand)"; });
+        dz.addEventListener("dragleave", () => { dz.style.borderColor = "var(--line)"; });
+        dz.addEventListener("drop", e => {
+          e.preventDefault();
+          dz.style.borderColor = "var(--line)";
+          if (e.dataTransfer.files && e.dataTransfer.files[0]) handleAgentResumeFile(e.dataTransfer.files[0]);
+        });
+      }
+    }
     if (path === "bank") bindBank();
     if (path === "tracker") bindTracker();
     if (path === "resources") bindResources();
@@ -534,20 +569,146 @@
   }
 
   function pageAgent() {
+    if (agentView === "home") return agentHomeHtml();
+    if (!S.userProfile.complete) {
+      if (agentView === "confirm" && agentParsed) return profileConfirmHtml();
+      if (agentView === "goals") return profileGoalsHtml();
+      return profileWelcomeHtml();
+    }
+    return agentHomeHtml();
+  }
+
+  function profileWelcomeHtml() {
     return `
       <div class="hero-band">
-        <div class="grow"><h2>今天想完成什么？</h2><p>输入求职目标，Agent 会自主规划、调用工具并生成可执行的行动方案。</p></div>
+        <div class="grow"><h2>先让我了解你</h2><p>上传简历后，我会自动提取教育、实习、项目和技能信息，之后你不用反复告诉我你的经历。</p></div>
+        ${badge("求职画像建立", "b-teal")}
+      </div>
+      <div class="card panel">
+        <div class="panel-head"><div><h2>上传你的简历</h2><div class="sub">支持 PDF / DOCX / PNG / JPG / TXT，单文件 ≤ 10MB</div></div></div>
+        <div id="agentDropZone" class="empty" style="border:1.5px dashed var(--line);border-radius:8px;cursor:pointer">
+          ${Icon("upload", 30)}
+          <h3>点击选择文件，或拖拽到这里</h3>
+          <p>建议上传最新版本简历</p>
+          <input type="file" id="agentResumeFile" accept=".pdf,.docx,.png,.jpg,.jpeg,.txt" hidden>
+        </div>
+        <div id="agentProfileStatus" style="font-size:13px;color:var(--ink-3);text-align:center;min-height:20px;margin-top:10px"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px">
+          <button class="btn" data-action="agent-skip">跳过，稍后填写</button>
+        </div>
+      </div>`;
+  }
+
+  function profileConfirmHtml() {
+    const p = (agentParsed && agentParsed.profile) || S.userProfile;
+    const b = p.basic || {};
+    const listLines = arr => (arr || []).map(x => x.raw || (typeof x === "string" ? x : Object.values(x).filter(Boolean).join(" | "))).join("\n");
+    const skills = p.skills || {};
+    return `
+      <div class="card panel" style="margin-bottom:14px">
+        <div class="panel-head"><div><h2>我从你的简历中识别出了这些信息</h2><div class="sub">请确认信息是否准确，确认后将成为 Agent 分析你的基础。</div></div>
+          ${agentParsed && agentParsed.warning ? badge("解析提示", "b-amber") : badge("AI 解析", "b-teal")}</div>
+        ${agentParsed && agentParsed.warning ? '<div class="note">' + Icon("alert-circle") + "<span>" + esc(agentParsed.warning) + "</span></div>" : ""}
+        <div class="form-grid">
+          <div class="form-item"><label>姓名</label><input id="pfName" value="${esc(b.name || "")}"></div>
+          <div class="form-item"><label>学校</label><input id="pfSchool" value="${esc(b.school || "")}"></div>
+          <div class="form-item"><label>专业</label><input id="pfMajor" value="${esc(b.major || "")}"></div>
+          <div class="form-item"><label>学历</label><input id="pfDegree" value="${esc(b.degree || "")}"></div>
+          <div class="form-item"><label>预计毕业年份</label><input id="pfGradYear" value="${esc(b.gradYear || "")}"></div>
+          <div class="form-item full"><label>教育经历（每行一条：学校 | 专业 | 学历 | 时间）</label><textarea id="pfEdu" rows="4">${esc(listLines(p.education))}</textarea></div>
+          <div class="form-item full"><label>实习经历（每行一条：公司 | 岗位 | 时间 | 内容）</label><textarea id="pfExp" rows="5">${esc(listLines(p.experiences))}</textarea></div>
+          <div class="form-item full"><label>项目经历（每行一条：名称 | 时间 | 背景 | 职责 | 结果）</label><textarea id="pfProj" rows="6">${esc(listLines(p.projects))}</textarea></div>
+          <div class="form-item"><label>产品能力（逗号分隔）</label><input id="pfSkillProduct" value="${esc((skills.product || []).join("、"))}"></div>
+          <div class="form-item"><label>AI 能力（逗号分隔）</label><input id="pfSkillAi" value="${esc((skills.ai || []).join("、"))}"></div>
+          <div class="form-item"><label>数据/技术能力（逗号分隔）</label><input id="pfSkillTech" value="${esc((skills.tech || []).join("、"))}"></div>
+          <div class="form-item full"><label>AI 实践（逗号分隔）</label><input id="pfAiPractice" value="${esc((p.aiPractice || []).join("、"))}"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <button class="btn" data-action="agent-upload-back">重新上传</button>
+          <button class="btn btn-primary" data-action="agent-confirm-profile">${Icon("check")}确认并填写求职目标</button>
+        </div>
+      </div>`;
+  }
+
+  function profileGoalsHtml() {
+    const g = S.userProfile.goals;
+    const roleOptions = ["AI 产品经理", "AI Agent 产品经理", "AI 应用产品经理", "大模型产品经理", "产品经理"];
+    const stageOptions = ["探索方向", "准备秋招", "已开始投递", "已进入笔试", "已进入面试", "已获得 Offer"];
+    const cityOptions = ["北京", "上海", "深圳", "杭州", "广州", "成都", "南京", "武汉", "西安", "苏州"];
+    const dirOptions = ["AI 应用", "大模型", "Agent", "数据", "产品", "运营"];
+    const companyOptions = [...new Set(D.resources.campus.concat(D.resources.intern).concat(D.resources.state).map(r => r.company).concat(remoteRes ? remoteRes.map(x => x.company) : []))].filter(Boolean).slice(0, 18);
+    const chip = (label, active, action, value) => '<button type="button" class="option-chip' + (active ? " active" : "") + '" data-action="' + action + '" data-value="' + esc(value) + '">' + esc(label) + "</button>";
+    return `
+      <div class="card panel">
+        <div class="panel-head"><div><h2>你现在想做什么？</h2><div class="sub">告诉 Agent 求职目标，之后它会基于这些信息做个性化规划。</div></div>${badge("求职目标", "b-teal")}</div>
+        <div class="form-grid">
+          <div class="form-item full"><label>目标岗位（必选，可多选）</label>
+            <div class="pill-row">${roleOptions.map(r => chip(r, g.roles.includes(r), "agent-role", r)).join("")}</div>
+            <div style="display:flex;gap:8px;margin-top:8px"><input id="agentRoleAdd" placeholder="添加自定义岗位" style="height:34px;flex:1"><button class="btn btn-sm" data-action="agent-add-role">添加</button></div>
+          </div>
+          <div class="form-item full"><label>求职阶段（必选）</label>
+            <div class="pill-row">${stageOptions.map(s => chip(s, g.stage === s, "agent-stage", s)).join("")}</div>
+          </div>
+          <div class="form-item full"><label>目标公司（可选）</label>
+            <div class="pill-row">${companyOptions.map(c => chip(c, g.companies.includes(c), "agent-company", c)).join("")}</div>
+            <div style="display:flex;gap:8px;margin-top:8px"><input id="agentCompanyAdd" placeholder="添加目标公司" style="height:34px;flex:1"><button class="btn btn-sm" data-action="agent-add-company">添加</button></div>
+          </div>
+          <div class="form-item full"><label>目标城市（可选）</label>
+            <div class="pill-row">${cityOptions.map(c => chip(c, g.cities.includes(c), "agent-city", c)).join("")}</div>
+            <div style="display:flex;gap:8px;margin-top:8px"><input id="agentCityAdd" placeholder="添加目标城市" style="height:34px;flex:1"><button class="btn btn-sm" data-action="agent-add-city">添加</button></div>
+          </div>
+          <div class="form-item full"><label>期望方向（可选）</label>
+            <div class="pill-row">${dirOptions.map(d => chip(d, g.direction.includes(d), "agent-direction", d)).join("")}</div>
+            <div style="display:flex;gap:8px;margin-top:8px"><input id="agentDirAdd" placeholder="添加期望方向" style="height:34px;flex:1"><button class="btn btn-sm" data-action="agent-add-direction">添加</button></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn" data-action="agent-goals-back">上一步</button>
+          <button class="btn btn-primary" data-action="agent-goals-done">${Icon("check")}生成我的求职画像</button>
+        </div>
+      </div>`;
+  }
+
+  function agentHomeHtml() {
+    const up = S.userProfile;
+    const roles = (up.goals.roles || []).join("、") || "未设置";
+    const stage = up.goals.stage || "未设置";
+    const starters = [
+      ["分析一个岗位", "帮我分析目标岗位的匹配度"],
+      ["帮我优化简历", "帮我优化简历，匹配当前求职目标"],
+      ["制定面试计划", "帮我制定面试准备计划"],
+      ["分析我的能力差距", "帮我分析我的能力差距并推荐训练"],
+      ["推荐今天的训练", "帮我推荐今天的训练内容"],
+      ["复盘最近的面试", "帮我复盘最近的面试"]
+    ];
+    return `
+      <div class="hero-band">
+        <div class="grow"><h2>Hi，${esc(up.basic.name || "同学")}</h2><p>我已经了解你的求职情况。当前目标：${esc(roles)} · 求职阶段：${esc(stage)}</p></div>
         ${badge("Single Agent + Tools", "b-teal")}
+      </div>
+      <div class="card panel" style="margin-bottom:14px">
+        <div class="panel-head"><div><h2>求职画像</h2><div class="sub">Agent Context 第一层：你是谁、你想做什么</div></div>
+          <button class="btn btn-sm" data-action="agent-onboard">${Icon("edit")}完善画像</button></div>
+        <div class="score-grid" style="grid-template-columns:110px 1fr">
+          <div class="ring" style="--val:${up.completeness}"><div><b>${up.completeness}</b><span>完整度</span></div></div>
+          <div>
+            ${up.complete ? "" : '<div class="note">' + Icon("alert-circle") + "<span>暂时没有简历也可以使用 Agent，但缺少个人经历时部分分析只能提供通用建议。</span></div>"}
+            <div class="dim-row"><span>基础信息</span><div class="progress"><i style="width:${up.basic && up.basic.school ? 100 : 30}%"></i></div><b>${up.basic && up.basic.school ? "✓" : "○"}</b></div>
+            <div class="dim-row"><span>教育经历</span><div class="progress"><i style="width:${up.education.length ? 100 : 20}%"></i></div><b>${up.education.length ? "✓" : "○"}</b></div>
+            <div class="dim-row"><span>项目经历</span><div class="progress"><i style="width:${up.projects.length ? 100 : 20}%"></i></div><b>${up.projects.length ? "✓" : "○"}</b></div>
+            <div class="dim-row"><span>AI 实践</span><div class="progress"><i style="width:${up.aiPractice.length ? 100 : 20}%"></i></div><b>${up.aiPractice.length ? "✓" : "○"}</b></div>
+            <div class="dim-row"><span>求职目标</span><div class="progress"><i style="width:${up.goals.roles.length ? 100 : 20}%"></i></div><b>${up.goals.roles.length ? "✓" : "○"}</b></div>
+          </div>
+        </div>
       </div>
       ${!window.OFFERFLOW_BACKEND && (!S.profile.aiEnabled || !S.profile.apiKey) ? '<div class="note" style="margin-bottom:14px">' + Icon("lightbulb") + "<span>当前为本地规则引擎（未配置 AI 接口）。配置 AI 接口或部署后端后，Agent 将由大模型驱动规划、工具调用与动态决策。</span></div>" : ""}
       <div class="card panel" style="margin-bottom:14px">
+        <div class="form-item full" style="margin-bottom:12px"><label>Agent Task Starter</label>
+          <div class="pill-row">${starters.map(s => '<button type="button" class="option-chip" data-action="agent-starter" data-value="' + esc(s[1]) + '">' + esc(s[0]) + "</button>").join("")}</div>
+        </div>
         <div class="form-grid">
           <div class="form-item full"><label>求职目标</label>
-            <textarea id="agentGoal" rows="3" placeholder="例如：帮我准备阿里 AI 产品经理面试，还有 10 天">${esc(agentInput)}</textarea></div>
-          <div class="form-item full"><label>快捷目标</label>
-            <div class="pill-row">
-              ${["准备阿里 AI 产品经理面试", "分析腾讯 AI PM 岗位我适不适合", "还有 10 天面试，帮我安排计划", "帮我诊断能力差距并推荐题目"].map(g => '<button type="button" class="option-chip" data-action="agent-goal" data-value="' + esc(g) + '">' + esc(g) + "</button>").join("")}
-            </div>
+            <textarea id="agentGoal" rows="3" placeholder="例如：帮我看看我和阿里 AI 产品经理岗位还有哪些差距">${esc(agentInput)}</textarea></div>
           </div>
           <div class="form-item full"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="agentShowJd" data-action="agent-toggle-jd" ${agentShowJd ? "checked" : ""} style="accent-color:var(--brand)"> 附带岗位 JD 文本</label></div>
           ${agentShowJd ? '<div class="form-item full"><label>JD 文本</label><textarea id="agentJdText" rows="5" placeholder="粘贴目标岗位 JD…"></textarea></div>' : ""}
@@ -557,6 +718,120 @@
         </div>
       </div>
       <div id="agentResultWrap">${agentResult ? agentResultHtml(agentResult) : '<div class="card empty">' + Icon("bot") + "<h3>还没有执行任务</h3><p>输入一个求职目标，让 Agent 开始分析。</p></div>"}</div>`;
+  }
+
+  function base64ToText(b64) {
+    try {
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    } catch (e) { return ""; }
+  }
+
+  async function handleAgentResumeFile(file) {
+    if (!file) return;
+    if (!/\.(pdf|docx|png|jpe?g|txt)$/i.test(file.name)) { toast("仅支持 PDF / DOCX / PNG / JPG / TXT"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast("文件超过 10MB 限制"); return; }
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const data = String(ev.target.result).split(",")[1] || "";
+      if (window.OFFERFLOW_BACKEND) {
+        const status = $("#agentProfileStatus");
+        if (status) status.textContent = "正在解析简历…";
+        const token = window.Auth && Auth.token ? Auth.token() : "";
+        try {
+          const r = await fetch("/api/resume/parse", {
+            method: "POST",
+            headers: Object.assign({ "Content-Type": "application/json" }, token ? { Authorization: "Bearer " + token } : {}),
+            body: JSON.stringify({ filename: file.name, mime: file.type, data }),
+            cache: "no-store"
+          });
+          const d = await r.json();
+          if (!r.ok) { toast(d.error || "简历解析失败"); if (status) status.textContent = ""; return; }
+          d.sourceName = file.name;
+          agentParsed = d;
+          agentView = "confirm";
+          render();
+        } catch (e) {
+          toast("解析请求失败");
+          if (status) status.textContent = "";
+        }
+      } else {
+        if (/\.txt$/i.test(file.name)) {
+          agentParsed = { ok: true, text: base64ToText(data), profile: null, warning: "单机模式未调用模型，已读取文本，请手动核对并编辑。", sourceName: file.name };
+        } else {
+          agentParsed = { ok: true, text: "", profile: null, warning: "单机模式无法解析该格式，请使用 TXT 简历或手动填写；部署后端后可自动解析 PDF/DOCX/图片。", sourceName: file.name };
+        }
+        agentView = "confirm";
+        render();
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function calcProfileCompleteness(up) {
+    let score = 0;
+    const b = up.basic || {};
+    if (b.name) score += 5;
+    if (b.school) score += 5;
+    if (b.major) score += 5;
+    if (b.degree || b.gradYear) score += 5;
+    if ((up.education || []).length) score += 10;
+    if ((up.experiences || []).length) score += 20;
+    if ((up.projects || []).length) score += 20;
+    const sks = up.skills || {};
+    if (sks.product && sks.product.length) score += 8;
+    if (sks.ai && sks.ai.length) score += 8;
+    if (sks.tech && sks.tech.length) score += 4;
+    if ((up.aiPractice || []).length) score += 10;
+    if (up.goals && up.goals.roles && up.goals.roles.length) score += 15;
+    if (up.goals && up.goals.stage) score += 10;
+    return Math.min(100, score);
+  }
+
+  function confirmAgentProfile() {
+    const val = id => ($("#" + id) && $("#" + id).value) || "";
+    const lines = id => val(id).split("\n").map(l => l.trim()).filter(Boolean).map(raw => ({ raw }));
+    const split = id => val(id).split(/[,，、\n]/).map(s => s.trim()).filter(Boolean);
+    S.userProfile.basic = { name: val("pfName"), school: val("pfSchool"), major: val("pfMajor"), degree: val("pfDegree"), gradYear: val("pfGradYear") };
+    S.userProfile.education = lines("pfEdu");
+    S.userProfile.experiences = lines("pfExp");
+    S.userProfile.projects = lines("pfProj");
+    S.userProfile.skills = { product: split("pfSkillProduct"), ai: split("pfSkillAi"), tech: split("pfSkillTech") };
+    S.userProfile.aiPractice = split("pfAiPractice");
+    if (agentParsed && agentParsed.sourceName) S.userProfile.source.name = agentParsed.sourceName;
+    S.userProfile.source.updatedAt = nowStr();
+    S.userProfile.completeness = calcProfileCompleteness(S.userProfile);
+    agentView = "goals";
+    render();
+  }
+
+  function toggleGoalArr(key, value) {
+    const arr = S.userProfile.goals[key] || (S.userProfile.goals[key] = []);
+    const i = arr.indexOf(value);
+    if (i >= 0) arr.splice(i, 1); else arr.push(value);
+  }
+
+  function addAgentChip(inputId, key) {
+    const v = ($("#" + inputId) && $("#" + inputId).value.trim()) || "";
+    if (!v) return;
+    const arr = S.userProfile.goals[key] || (S.userProfile.goals[key] = []);
+    if (!arr.includes(v)) arr.push(v);
+    render();
+  }
+
+  function completeAgentGoals() {
+    const g = S.userProfile.goals;
+    if (!g.roles.length || !g.stage) { toast("请至少选择目标岗位和求职阶段"); return; }
+    S.userProfile.complete = true;
+    S.userProfile.completeness = calcProfileCompleteness(S.userProfile);
+    S.userProfile.updatedAt = nowStr();
+    save();
+    agentView = "home";
+    agentResult = null;
+    render();
+    toast("求职画像已建立");
   }
 
   function agentResultHtml(r) {
@@ -1629,6 +1904,7 @@
         selfTests: Array.isArray(b.selfTests) ? b.selfTests : [],
         solved: Array.isArray(b.solved) ? b.solved : [],
         practice: Array.isArray(b.practice) ? b.practice : [],
+        userProfile: b.userProfile && typeof b.userProfile === "object" ? Object.assign(emptyUserProfile(), b.userProfile) : emptyUserProfile(),
         tasks: Array.isArray(b.tasks) ? b.tasks : []
       };
     } else {
@@ -1639,6 +1915,7 @@
       S.selfTests = S.selfTests.concat(b.selfTests || []);
       S.solved = S.solved.concat(b.solved || []);
       S.practice = S.practice.concat(b.practice || []).slice(0, 500);
+      if (b.userProfile && (!S.userProfile.complete || b.userProfile.complete)) S.userProfile = Object.assign(emptyUserProfile(), b.userProfile);
       S.favorites = Array.from(new Set(S.favorites.concat(b.favorites || [])));
       S.mastered = Array.from(new Set(S.mastered.concat(b.mastered || [])));
       if (b.profile && b.profile.name) S.profile.name = b.profile.name;
@@ -2107,6 +2384,22 @@
       case "agent-goal": agentInput = el.dataset.value; runAgentAction(); break;
       case "agent-toggle-jd": agentShowJd = !!el.checked; render(); break;
       case "run-agent": runAgentAction(); break;
+      case "agent-onboard": agentView = "welcome"; agentParsed = null; render(); break;
+      case "agent-skip": agentView = "home"; render(); break;
+      case "agent-upload-back": agentParsed = null; agentView = "welcome"; render(); break;
+      case "agent-confirm-profile": confirmAgentProfile(); break;
+      case "agent-goals-back": agentView = agentParsed ? "confirm" : "welcome"; render(); break;
+      case "agent-goals-done": completeAgentGoals(); break;
+      case "agent-role": toggleGoalArr("roles", el.dataset.value); render(); break;
+      case "agent-stage": S.userProfile.goals.stage = el.dataset.value; render(); break;
+      case "agent-company": toggleGoalArr("companies", el.dataset.value); render(); break;
+      case "agent-city": toggleGoalArr("cities", el.dataset.value); render(); break;
+      case "agent-direction": toggleGoalArr("direction", el.dataset.value); render(); break;
+      case "agent-add-role": addAgentChip("agentRoleAdd", "roles"); break;
+      case "agent-add-company": addAgentChip("agentCompanyAdd", "companies"); break;
+      case "agent-add-city": addAgentChip("agentCityAdd", "cities"); break;
+      case "agent-add-direction": addAgentChip("agentDirAdd", "direction"); break;
+      case "agent-starter": agentInput = el.dataset.value; runAgentAction(); break;
       case "agent-confirm-tasks": confirmAgentTasks(); break;
       case "agent-save-job": saveAgentJob(); break;
       case "agent-practice": startMockWith([Number(el.dataset.id)]); break;

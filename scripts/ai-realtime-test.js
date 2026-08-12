@@ -102,6 +102,7 @@ const ARK_BASE = process.env.ARK_BASE || 'https://ark.cn-beijing.volces.com/api/
   await step('real ai agent planning', async () => {
     await page.goto(BASE + '/#/agent', { waitUntil: 'load' });
     await page.waitForTimeout(250);
+    if (await page.locator('#agentDropZone').count() === 1) await page.click('[data-action="agent-skip"]');
     await page.fill('#agentGoal', '帮我准备阿里 AI 产品经理面试，还有 10 天');
     await page.click('[data-action="run-agent"]');
     await page.waitForFunction(() => {

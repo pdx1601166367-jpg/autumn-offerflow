@@ -52,6 +52,22 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     }, token);
     ok('import job for agent retrieval', importRes.ok === true);
     await page.goto(BASE + '/#/agent', { waitUntil: 'load' });
+    await page.waitForSelector('#agentDropZone');
+    ok('agent onboarding shown', (await page.textContent('#view')).includes('先让我了解你'));
+    const resumeText = 'Name: Zhang San\nSchool: Zhejiang Gongshang University\nMajor: Advertising\nDegree: Bachelor\nGraduation: 2027\nExperience: ByteDance intern, Product Assistant\nProject: AI fitness assistant with RAG and Prompt\nSkills: SQL, Python, RAG, Prompt Engineering';
+    await page.setInputFiles('#agentResumeFile', { name: 'resume.txt', mimeType: 'text/plain', buffer: Buffer.from(resumeText, 'utf8') });
+    await page.waitForFunction(() => document.body.innerText.includes('我从你的简历中识别出了这些信息'), null, { timeout: 90000 });
+    await page.click('[data-action="agent-confirm-profile"]');
+    await page.waitForFunction(() => document.body.innerText.includes('你现在想做什么'), null, { timeout: 15000 });
+    await page.click('[data-action="agent-role"][data-value="AI 产品经理"]');
+    await page.click('[data-action="agent-stage"][data-value="准备秋招"]');
+    await page.click('[data-action="agent-goals-done"]');
+    await page.waitForFunction(() => document.body.innerText.includes('求职画像'), null, { timeout: 15000 });
+    const profileOk = await page.evaluate(() => {
+      const up = JSON.parse(localStorage.getItem('offerflow:v1')).userProfile;
+      return up && up.complete && up.goals.roles.includes('AI 产品经理') && up.goals.stage === '准备秋招';
+    });
+    ok('user profile created', profileOk === true);
     await page.fill('#agentGoal', '帮我分析云端检索公司 AI 产品经理岗位适不适合');
     await page.click('[data-action="run-agent"]');
     await page.waitForFunction(() => {

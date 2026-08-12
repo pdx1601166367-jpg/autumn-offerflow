@@ -6,6 +6,7 @@
 
 - 工作台：准备指数、可编辑今日任务、能力雷达与薄弱点推荐、产品方向每日一题（每日 00:00 自动换题）、面试日历与倒计时、本周学习报告、投递管道、最近复盘、校招速览独立整行展示
 - AI 求职 Agent（V2）：目标驱动入口，由大模型逐轮决策调用真实工具（岗位检索/JD 分析/简历分析/简历匹配/能力诊断/复盘记忆/题目推荐/计划生成/任务建议），每步读取工具中间结果后再决定下一步，最终生成匹配分、缺口、训练计划与报告；未配置 AI 时明确降级为本地规则引擎
+- Agent 首次求职画像：首次进入 Agent 先建立用户 Context——上传简历（PDF/DOCX/PNG/JPG/TXT，≤10MB）→ 服务端提取文本/OCR → AI 结构化解析 → 用户确认/编辑 → 设置目标岗位/求职阶段/目标公司/城市/方向 → 生成 User Profile 与完整度；Agent 首页展示画像、快捷任务 Starter，后续分析不再重复询问已确认信息；支持跳过并保持低完整度使用
 - 后端 AI 网关：多人版所有 AI 调用统一走后端 `/api/ai/*`（服务端配置 `AI_API_KEY`），前端不再依赖个人 Key；系统状态接口 `/api/system/status` 可查看 AI/数据源配置与用户数
 - Agent 复盘诊断：分析最近多场复盘中的重复问题，识别持续性能力缺口并推荐训练题目、生成专项任务
 - Agent 简历优化：分析 → 改写 → 再评估，给出优化前后匹配分与可直接应用的改写简历
@@ -181,6 +182,7 @@ scripts/start-local.ps1 / start-local.sh   本地一键启动
 scripts/agent-eval-data.js   Agent 标准任务评测集（12 例）
 scripts/agent-eval.js        Agent 评估脚本（任务成功率/工具准确率/规划准确率）
 server/server.js   多人版 Node 后端（静态资源 + 注册登录 + 状态同步 + 校招数据源）
+server/resume-parser.js   简历文本提取（DOCX/PDF/TXT）与格式识别
 server/scraper.js   白名单抓取器（JSON-LD / 链接文本）
 server/sources/whitelist.example.json   白名单配置示例
 server/sources/fixture.html   抓取器测试夹具

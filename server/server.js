@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { scrapeWhitelist } = require('./scraper');
+const { extractResume } = require('./resume-parser');
 
 function loadEnvFile() {
   const p = path.join(__dirname, '.env.local');
@@ -308,6 +309,52 @@ const server = http.createServer(async (req, res) => {
           guestQuota: AI_GUEST_DAILY,
           usageDate: usage.date
         });
+      }
+      if (pathname === '/api/resume/parse' && req.method === 'POST') {
+        if (rateLimited(req.socket.remoteAddress)) return sendJson(res, 429, { error: '请求过于频繁，请稍后再试' });
+        const body = await readBody(req);
+        const user = authUser(req);
+        const identity = user ? 'u:' + user.id : 'ip:' + req.socket.remoteAddress;
+        if (!consumeQuota(identity, user ? AI_DAILY_LIMIT_PER_USER : AI_GUEST_DAILY)) return sendJson(res, 429, { error: '今日 AI 调用次数已达上限' });
+        if (!body.data || !body.filename) return sendJson(res, 400, { error: '缺少简历文件' });
+        if (String(body.data).length * 0.75 > 10 * 1024 * 1024) return sendJson(res, 413, { error: '文件超过 10MB 限制' });
+        let ext;
+        try {
+          ext = extractResume(body.filename, body.mime, body.data);
+        } catch (e) {
+          return sendJson(res, 400, { error: e.message });
+        }
+        if (ext.error) return sendJson(res, 400, { error: ext.error });
+        let text = ext.text || '';
+        let warning = '';
+        if (ext.image) {
+          const dataUrl = 'data:image/png;base64,' + ext.image.toString('base64');
+          const r = await callAIProxy([
+            { role: 'system', content: '你是简历 OCR 助手。把图片中的简历文字完整、按原结构提取出来，保留换行；不要翻译、不要总结、不要评论。' },
+            { role: 'user', content: [{ type: 'text', text: '提取这张简历图片中的全部文字：' }, { type: 'image_url', image_url: { url: dataUrl } }] }
+          ], 2000);
+          if (r.error) return sendJson(res, 503, { error: r.error });
+          text = r.content || '';
+          if (!text.trim()) warning = 'OCR 未识别到文字';
+        }
+        if (!text.trim()) return sendJson(res, 200, { ok: true, text: '', profile: null, warning: '未能提取到文字，可使用基础手动填写模式' });
+        let profile = null;
+        if (AI_API_KEY) {
+          const pr = await callAIProxy([
+            { role: 'system', content: '你是简历结构化解析器。从简历文本提取 JSON：{"basic":{"name":"","school":"","major":"","degree":"","gradYear":""},"education":[],"experiences":[],"projects":[],"skills":{"product":[],"ai":[],"tech":[]},"aiPractice":[],"summary":""}。只提取简历明确出现的信息，不得虚构；缺失字段给空值。' },
+            { role: 'user', content: text.slice(0, 8000) }
+          ], 2200);
+          if (!pr.error && pr.content) {
+            try {
+              const cleaned = pr.content.replace(/```json|```/g, '').trim();
+              profile = JSON.parse(cleaned);
+            } catch (e) {
+              const m = pr.content.match(/\{[\s\S]*\}/);
+              if (m) { try { profile = JSON.parse(m[0]); } catch (e2) {} }
+            }
+          }
+        }
+        return sendJson(res, 200, { ok: true, text: text.slice(0, 8000), profile, warning });
       }
       if (pathname === '/api/ai/chat' && req.method === 'POST') {
         if (rateLimited(req.socket.remoteAddress)) return sendJson(res, 429, { error: '请求过于频繁，请稍后再试' });

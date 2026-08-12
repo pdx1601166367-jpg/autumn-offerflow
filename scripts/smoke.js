@@ -98,6 +98,9 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   await step('agent workbench', async () => {
     await goto(BASE + '/#/agent');
     ok('agent nav present', await page.locator('.nav-item[data-id="agent"]').count() === 1);
+    await page.waitForSelector('#agentDropZone');
+    await page.click('[data-action="agent-skip"]');
+    ok('agent onboarding skip to home', await page.locator('#agentGoal').count() === 1);
     await page.fill('#agentGoal', '帮我准备阿里 AI 产品经理面试，还有 10 天');
     await page.click('[data-action="run-agent"]');
     await page.waitForSelector('#agentResultWrap');
