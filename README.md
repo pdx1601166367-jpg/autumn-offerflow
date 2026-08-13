@@ -1,6 +1,6 @@
 # OfferFlow 智能求职面试平台
 
-基于 [Gank Interview](https://www.gankinterview.cn/) 的产品拆解，仿照其核心能力搭建的本地优先招聘面试平台。产品拆解全文见 [PRODUCT-BREAKDOWN.md](PRODUCT-BREAKDOWN.md)。
+本地优先的智能求职面试平台，覆盖岗位信息收集、简历优化、题库练习、模拟面试、投递管理与复盘的全流程。
 
 ## 功能模块
 
@@ -192,5 +192,4 @@ deploy/            部署配套（Docker/systemd/Nginx/Caddy/备份）
 manifest.webmanifest   PWA 安装清单
 sw.js              离线缓存 Service Worker
 icon.svg           应用图标
-PRODUCT-BREAKDOWN.md   Gank Interview 产品拆解与模块映射
 ```
